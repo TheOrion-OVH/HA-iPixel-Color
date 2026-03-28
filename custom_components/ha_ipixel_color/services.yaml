@@ -1,0 +1,140 @@
+send_image:
+  name: Envoyer une image
+  description: Envoie une image locale, une URL ou une animation préconfigurée sur le panneau iPixel.
+  fields:
+    path:
+      name: Chemin
+      description: URL externe (http), chemin HA local (/config/...), ou animation (ex animation:fire).
+      required: true
+      selector:
+        text:
+    resize_method:
+      name: Redimensionnement
+      description: Action à effectuer avec les marges (crop ou fit).
+      required: false
+      selector:
+        select:
+          options:
+            - crop
+            - fit
+
+send_text:
+  name: Envoyer du texte
+  description: Affiche un message personnalisé.
+  fields:
+    message:
+      name: Message
+      required: true
+      selector:
+        text:
+    color:
+      name: Couleur du texte
+      description: Format hex sans hashtag (ex ffffff)
+      required: false
+      selector:
+        text:
+    bg_color:
+      name: Couleur de fond
+      required: false
+      selector:
+        text:
+    font:
+      name: Police
+      required: false
+      selector:
+        select:
+          options:
+            - CUSONG
+            - SIMSUN
+            - VCR_OSD_MONO
+    speed:
+      name: Vitesse
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 100
+    rainbow_mode:
+      name: Arc-en-ciel
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 4
+
+set_power:
+  name: Définir l'alimentation
+  description: Allume ou éteint l'écran
+  fields:
+    on_state:
+      name: Allumé
+      required: true
+      selector:
+        boolean: {}
+
+set_brightness:
+  name: Définir la luminosité
+  fields:
+    level:
+      name: Niveau
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 100
+
+set_clock_mode:
+  name: Mode horloge
+  fields:
+    style:
+      name: Style
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 8
+
+set_orientation:
+  name: Définir l'orientation
+  fields:
+    orientation:
+      name: Rotation
+      required: true
+      selector:
+        select:
+          options:
+            - label: "0 — Normal"
+              value: "0"
+            - label: "1 — 90°"
+              value: "1"
+            - label: "2 — 180°"
+              value: "2"
+            - label: "3 — 270°"
+              value: "3"
+
+set_pixel:
+  name: Dessiner un Pixel
+  fields:
+    x:
+      name: Position X
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 31
+    y:
+      name: Position Y
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 31
+    color:
+      name: Couleur Hex
+      required: true
+      selector:
+        text:
+
+clear:
+  name: Effacer l'écran
+  description: Vide la mémoire de l'écran

@@ -1,0 +1,32 @@
+"""Config flow for iPixel integration."""
+import voluptuous as vol
+from homeassistant import config_entries
+from homeassistant.core import HomeAssistant
+
+from .const import DOMAIN, CONF_MAC_ADDRESS, CONF_HOST, DEFAULT_NAME
+
+class IPixelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for iPixel."""
+
+    VERSION = 1
+
+    async def async_step_user(self, user_input=None):
+        """Handle the initial step."""
+        errors = {}
+
+        if user_input is not None:
+            await self.async_set_unique_id(user_input[CONF_MAC_ADDRESS])
+            self._abort_if_unique_id_configured()
+            
+            return self.async_create_entry(title=DEFAULT_NAME, data=user_input)
+
+        data_schema = vol.Schema(
+            {
+                vol.Required(CONF_MAC_ADDRESS): str,
+                vol.Optional(CONF_HOST, default="localhost:5042"): str,
+            }
+        )
+
+        return self.async_show_form(
+            step_id="user", data_schema=data_schema, errors=errors
+        )
