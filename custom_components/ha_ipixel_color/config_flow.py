@@ -23,7 +23,6 @@ class IPixelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         data_schema = vol.Schema(
             {
                 vol.Required(CONF_MAC_ADDRESS): str,
-                vol.Optional(CONF_HOST, default="localhost:5042"): str,
             }
         )
 

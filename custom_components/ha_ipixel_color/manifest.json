@@ -6,7 +6,11 @@
   "issue_tracker": "https://github.com/TheOrion-OVH/HA-iPixel-Color/issues",
   "dependencies": [],
   "codeowners": [],
-  "requirements": ["websockets", "Pillow"],
+  "requirements": [
+    "pypixelcolor",
+    "websockets",
+    "Pillow"
+  ],
   "iot_class": "local_push",
   "config_flow": true
 }

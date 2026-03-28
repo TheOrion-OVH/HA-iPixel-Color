@@ -1,5 +1,8 @@
 """The iPixel integration."""
 import logging
+import asyncio
+import subprocess
+import sys
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
@@ -11,14 +14,28 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up iPixel from a config entry."""
     mac_address = entry.data.get(CONF_MAC_ADDRESS)
-    host = entry.data.get(CONF_HOST, "localhost:5042")
-    ws_uri = f"ws://{host}"
+    port = 5042
+    ws_uri = f"ws://127.0.0.1:{port}"
+    
+    cmd = [
+        sys.executable, "-m", "pypixelcolor.websocket",
+        "-a", mac_address,
+        "--host", "127.0.0.1",
+        "--port", str(port)
+    ]
+    
+    _LOGGER.info("Starting iPixel WebSocket Server: %s", " ".join(cmd))
+    process = subprocess.Popen(cmd)
+    
+    # Let the websocket server start
+    await asyncio.sleep(2)
     
     hub = IPixelHub(hass, ws_uri)
     hub.mac_address = mac_address
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = hub
+    hass.data[DOMAIN][f"{entry.entry_id}_process"] = process
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     
@@ -29,6 +46,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    process_key = f"{entry.entry_id}_process"
+    if process_key in hass.data[DOMAIN]:
+        process = hass.data[DOMAIN][process_key]
+        _LOGGER.info("Stopping iPixel WebSocket Server")
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+        hass.data[DOMAIN].pop(process_key)
+
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok
