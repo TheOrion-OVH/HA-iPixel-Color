@@ -14,7 +14,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         IPixelNumber(hub, "Vitesse", "speed", 0, 100, "mdi:speedometer"),
         IPixelNumber(hub, "Position Pixel X", "pixel_x", 0, 31, "mdi:axis-x-arrow"),
         IPixelNumber(hub, "Position Pixel Y", "pixel_y", 0, 31, "mdi:axis-y-arrow"),
-        IPixelNumber(hub, "Mode Arc-en-Ciel", "rainbow_mode", 0, 9, "mdi:rainbow"),
+        IPixelNumber(hub, "Mode Arc-en-Ciel", "rainbow_mode", 0, 4, "mdi:rainbow"),
     ]
     async_add_entities(numbers)
 

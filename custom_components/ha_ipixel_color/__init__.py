@@ -33,16 +33,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    async def _handle_weather_sun_change(event):
-        entity_id = event.data.get("entity_id", "")
-        if entity_id.startswith("weather.") or entity_id == "sun.sun":
-            if hub.data.get("weather_sync", False):
-                await hub.async_update_weather_sun()
-
-    entry.async_on_unload(
-        hass.bus.async_listen("state_changed", _handle_weather_sun_change)
-    )
-    
     # Exposer directement l'API en tant que services
     await async_setup_services(hass, hub)
 

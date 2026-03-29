@@ -12,14 +12,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     hub = hass.data[DOMAIN][entry.entry_id]
     buttons = [
         IPixelButton(hub, "Envoyer Message", "send_text", "mdi:send"),
-        IPixelButton(hub, "Envoyer Image", "send_image", "mdi:image-outline"),
-        IPixelButton(hub, "Appliquer Luminosité", "set_brightness", "mdi:brightness-6"),
-        IPixelButton(hub, "Mode Horloge", "set_clock_mode", "mdi:clock-outline"),
-        IPixelButton(hub, "Appliquer Orientation", "set_orientation", "mdi:screen-rotation"),
-        IPixelButton(hub, "Dessiner Pixel", "set_pixel", "mdi:square-edit-outline"),
-        IPixelButton(hub, "Démarrer l'animation", "play_anim", "mdi:play-circle"),
-        IPixelButton(hub, "Effacer Mémoire", "clear", "mdi:eraser"),
-        IPixelButton(hub, "Effacer Écran", "reboot", "mdi:monitor-off"),
+        IPixelButton(hub, "Envoyer Image", "send_image", "mdi:image"),
+        IPixelButton(hub, "Appliquer luminosité", "set_brightness", "mdi:brightness-5"),
+        IPixelButton(hub, "Appliquer vitesse", "set_speed", "mdi:speedometer"),
+        IPixelButton(hub, "Effacer écran", "clear", "mdi:monitor-off"),
+        IPixelButton(hub, "Mode Soleil", "show_sun", "mdi:white-balance-sunny"),
+        IPixelButton(hub, "Mode Météo", "show_weather", "mdi:weather-partly-cloudy"),
     ]
     async_add_entities(buttons)
 
@@ -56,7 +54,26 @@ class IPixelButton(ButtonEntity):
         elif self._action == "send_image":
             await self.hub.async_send_command("send_image", [f"path={d['image_url']}", f"resize_method={d['resize']}"])
         elif self._action == "set_brightness":
-            await self.hub.async_send_command("set_brightness", [f"level={int(d['brightness'])}"])
+            await self.hub.async_send_command("set_brightness", [f"brightness={int(d['brightness'])}"])
+        elif self._action == "set_speed":
+            await self.hub.async_send_command("set_speed", [f"speed={int(d['speed'])}"])
+        elif self._action == "clear":
+            await self.hub.async_send_command("clear")
+        elif self._action == "show_sun":
+            await self.hub.async_send_command("send_image", ["path=animation:sun_mode", "resize_method=fit"])
+        elif self._action == "show_weather":
+            w_states = self.hub.hass.states.async_all("weather")
+            if w_states:
+                w = w_states[0]
+                state = w.state
+                temp = w.attributes.get("temperature", 0)
+                hum = w.attributes.get("humidity", 0)
+            else:
+                state, temp, hum = "unknown", 0, 0
+                
+            import json
+            json_data = json.dumps({"state": state, "temp": temp, "humidity": hum})
+            await self.hub.async_send_command("send_image", [f"path=animation:weather_mode:{json_data}", "resize_method=fit"])
         elif self._action == "set_clock_mode":
             await self.hub.async_send_command("set_clock_mode", [f"style={d['clock_style']}", "show_date=True", "format_24=True"])
         elif self._action == "set_orientation":
