@@ -253,14 +253,14 @@ class PacmanAnimation:
         img.putdata(pixels)
         return img
 
+from .pixel_art import SunAnimation, WeatherAnimation, DashboardAnimation
+
 ANIMATION_CLASSES = {
     "fire": FireAnimation, "matrix": MatrixAnimation, "snow": SnowAnimation,
     "aurora": AuroraAnimation, "waves": WavesAnimation, "rainbow": RainbowAnimation,
     "plasma": PlasmaAnimation, "equalizer": EqualizerAnimation, "pacman": PacmanAnimation,
     "dashboard": DashboardAnimation,
 }
-
-from .pixel_art import SunAnimation, WeatherAnimation, DashboardAnimation
 
 class IPixelHub:
     """Hub for connecting and sending commands to the iPixel Proxy."""
