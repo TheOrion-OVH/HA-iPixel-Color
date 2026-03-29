@@ -134,23 +134,14 @@ class SunAnimation:
         return int(lerp(2, 18, t))
 
     def _draw_panel(self, d):
-        _draw_panel_bg(d)
-        is_next_set = self.state == "above_horizon"
-        
-        # Petit icône décorative à la place du texte
-        y_center = 16
-        icon_col = (255, 120, 30) if is_next_set else (180, 200, 255)
-        if is_next_set:
-            d.point((26, y_center), fill=(255, 100, 0)) 
-            d.line([(24, y_center+1), (28, y_center+1)], fill=(255, 160, 0))
-        else:
-            d.point((26, y_center+1), fill=(100, 150, 255))
-            d.point((27, y_center), fill=(200, 200, 255))
+        # Supprimé comme demandé pour laisser juste le soleil
+        pass
 
     def next_frame(self):
         is_day = self.state == "above_horizon"
         self._current_y = lerp(self._current_y, self._target_sun_y(), 0.15)
-        self._current_x = lerp(self._current_x, self._target_sun_x(), 0.15)
+        # On utilise une zone plus large car plus de panneau
+        self._current_x = lerp(self._current_x, self._target_sun_x_full(), 0.15)
         cy, cx = int(round(self._current_y)), int(round(self._current_x))
         top_col, bot_col = sky_color(self.elevation if is_day else -30)
 
@@ -165,12 +156,11 @@ class SunAnimation:
             for sx, sy, phase in self._stars:
                 twinkle_val = 0.5 + 0.5 * math.sin(self.frame * 0.07 + phase * 6.28)
                 brightness = int(80 + 175 * twinkle_val)
-                if sx < 21:
-                    d.point((sx, sy), fill=(brightness, brightness, min(255, brightness + 30)))
+                d.point((sx, sy), fill=(brightness, brightness, min(255, brightness + 30)))
 
         horizon_y = 26
-        d.line([(0, horizon_y), (19, horizon_y)], fill=(40, 55, 90))
-        d.line([(0, horizon_y + 1), (19, horizon_y + 1)], fill=(25, 35, 60))
+        d.line([(0, horizon_y), (W - 1, horizon_y)], fill=(40, 55, 90))
+        d.line([(0, horizon_y + 1), (W - 1, horizon_y + 1)], fill=(25, 35, 60))
 
         if is_day and cy <= horizon_y:
             self._draw_sun(d, cx, cy)
@@ -181,14 +171,20 @@ class SunAnimation:
             reflet_col = (255, 140, 50) if is_day else (100, 110, 220)
             for _ in range(4):
                 ry = random.randint(horizon_y + 1, W - 1)
-                rx = cx + random.randint(-5, 5)
-                if 0 <= rx < 20:
+                rx = cx + random.randint(-8, 8)
+                if 0 <= rx < W:
                     d.point((rx, ry), fill=reflet_col)
 
-        d = ImageDraw.Draw(img)
-        self._draw_panel(d)
         self.frame += 1
         return img
+
+    def _target_sun_x_full(self):
+        # Azimuth mapping sur tout l'écran (W=32)
+        if self.azimuth < 45: return 2
+        if self.azimuth > 315: return 2
+        # On map 45-315 sur 2-30
+        t = (self.azimuth - 45) / 270.0
+        return int(lerp(2, 29, t))
 
     def _draw_sun(self, d, cx, cy):
         pulse = math.sin(self.frame * 0.12) * 1.8
@@ -270,7 +266,7 @@ class WeatherAnimation:
         if flash:
             t_col = (255, 255, 200)
 
-        draw_text(d, f"{self.temp}°", 24, 4, t_col)
+        draw_text(d, f"{self.temp}°", 23, 10, t_col)
         
         _draw_separator(d, 16)
 
@@ -281,7 +277,9 @@ class WeatherAnimation:
         else:
             h_col = (100, 210, 130)
 
-        draw_text(d, f"{self.humidity}%", 24, 22, h_col)
+        # On décale pour faire de la place au %
+        draw_text(d, f"{self.humidity}", 23, 21, h_col)
+        draw_text(d, "%", 28, 26, (100, 150, 255))
 
     def _draw_icon(self, d, img):
         s, cx, cy = self.state, 10, 12
@@ -392,103 +390,3 @@ class WeatherAnimation:
         self.frame += 1
         return img
 
-
-class DashboardAnimation:
-    def __init__(self, data):
-        self.frame = 0
-        sun_data = data.copy()
-        sun_data["state"] = data.get("sun_state", "above_horizon")
-        self.sun = SunAnimation(sun_data)
-        self.weather = WeatherAnimation(data)
-        self.time_str = data.get("current_time", "00:00")
-        self.temp = self.weather.temp
-        self.feels_like = self.weather.feels_like
-        self.hum = self.weather.humidity
-        self.wind = self.weather.wind
-
-    def next_frame(self):
-        is_day = self.sun.state == "above_horizon"
-        self.sun._current_y = lerp(self.sun._current_y, self.sun._target_sun_y(), 0.15)
-        self.sun._current_x = lerp(self.sun._current_x, self.sun._target_sun_x(), 0.15)
-        cy, cx = int(round(self.sun._current_y)), int(round(self.sun._current_x))
-        top_col, bot_col = sky_color(self.sun.elevation if is_day else -30)
-
-        img = Image.new("RGB", (W, W), top_col)
-        d = ImageDraw.Draw(img)
-
-        for row in range(W):
-            t = row / (W - 1)
-            d.line([(0, row), (W-1, row)], fill=lerp_color(top_col, bot_col, t))
-
-        if not is_day:
-            for sx, sy, phase in self.sun._stars:
-                if sx < 21:
-                    twinkle_val = 0.5 + 0.5 * math.sin(self.frame * 0.07 + phase * 6.28)
-                    brightness = int(80 + 175 * twinkle_val)
-                    d.point((sx, sy), fill=(brightness, brightness, min(255, brightness + 30)))
-
-        horizon_y = 26
-        d.line([(0, horizon_y), (19, horizon_y)], fill=(40, 55, 90))
-        d.line([(0, horizon_y + 1), (19, horizon_y + 1)], fill=(25, 35, 60))
-
-        if is_day and cy <= horizon_y:
-            self.sun._draw_sun(d, cx, cy)
-        elif not is_day and cy <= horizon_y:
-            self.sun._draw_moon(d, cx, cy)
-
-        self.weather.frame = self.frame
-        self.weather._draw_icon(d, img)
-
-        if self.frame % 2 == 0:
-            reflet_col = (255, 140, 50) if is_day else (100, 110, 220)
-            for _ in range(3):
-                ry = random.randint(horizon_y + 1, W - 1)
-                rx = cx + random.randint(-4, 4)
-                if 0 <= rx < 20:
-                    d.point((rx, ry), fill=reflet_col)
-
-        d = ImageDraw.Draw(img)
-        _draw_panel_bg(d)
-
-        # Heure (Centrée horizontalement sur le panneau 22-31 -> milieu 26)
-        h, m = self.time_str[:2], self.time_str[3:5]
-        blink = (self.frame // 8) % 2 == 0
-        draw_text(d, h, 22, 1, (255, 255, 255))
-        if blink:
-            draw_text(d, ":", 26, 1, (200, 200, 200))
-        draw_text(d, m, 27, 1, (255, 255, 255))
-
-        _draw_separator(d, 8)
-
-        # Prochain événement solaire (Icone compacte seulement)
-        is_next_set = self.sun.state == "above_horizon"
-        y_ev = 11
-        icon_col = (255, 120, 30) if is_next_set else (180, 200, 255)
-        if is_next_set:
-            d.point((26, y_ev), fill=(255, 100, 0)) 
-            d.line([(24, y_ev+1), (28, y_ev+1)], fill=(255, 160, 0))
-        else:
-            d.point((26, y_ev+1), fill=(100, 150, 255))
-            d.point((27, y_ev), fill=(200, 200, 255))
-
-        _draw_separator(d, 16)
-
-        # Température et Humidité (Plus petits/nets)
-        if self.temp > 25: t_col = (255, 110, 50)
-        elif self.temp > 15: t_col = (255, 195, 70)
-        elif self.temp > 5: t_col = (150, 215, 255)
-        else: t_col = (110, 175, 255)
-        
-        draw_text(d, f"{self.temp}°", 23, 18, t_col)
-
-        _draw_separator(d, 24)
-
-        if self.hum >= 80: h_col = (80, 160, 255)
-        elif self.hum >= 60: h_col = (120, 200, 200)
-        else: h_col = (100, 210, 130)
-        
-        draw_text(d, f"{self.hum}%", 23, 26, h_col)
-
-        self.frame += 1
-        self.sun.frame = self.frame
-        return img

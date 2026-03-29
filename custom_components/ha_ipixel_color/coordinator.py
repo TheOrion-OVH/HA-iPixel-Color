@@ -253,13 +253,12 @@ class PacmanAnimation:
         img.putdata(pixels)
         return img
 
-from .pixel_art import SunAnimation, WeatherAnimation, DashboardAnimation
+from .pixel_art import SunAnimation, WeatherAnimation
 
 ANIMATION_CLASSES = {
     "fire": FireAnimation, "matrix": MatrixAnimation, "snow": SnowAnimation,
     "aurora": AuroraAnimation, "waves": WavesAnimation, "rainbow": RainbowAnimation,
     "plasma": PlasmaAnimation, "equalizer": EqualizerAnimation, "pacman": PacmanAnimation,
-    "dashboard": DashboardAnimation,
 }
 
 class IPixelHub:
@@ -302,9 +301,6 @@ class IPixelHub:
             elif anim_name.startswith("weather_mode:"):
                 data = json.loads(anim_name.split(":", 1)[1])
                 anim_obj = WeatherAnimation(data)
-            elif anim_name.startswith("dashboard:"):
-                data = json.loads(anim_name.split(":", 1)[1])
-                anim_obj = DashboardAnimation(data)
             else:
                 cls = ANIMATION_CLASSES.get(anim_name)
                 if not cls:

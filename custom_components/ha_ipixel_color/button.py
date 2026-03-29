@@ -22,7 +22,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         IPixelButton(hub, "Effacer écran", "clear", "mdi:monitor-off"),
         IPixelButton(hub, "Mode Soleil", "show_sun", "mdi:white-balance-sunny"),
         IPixelButton(hub, "Mode Météo", "show_weather", "mdi:weather-partly-cloudy"),
-        IPixelButton(hub, "Station Météo", "show_dashboard", "mdi:view-dashboard"),
         IPixelButton(hub, "Redémarrer", "reboot", "mdi:restart"),
     ]
     async_add_entities(buttons)
@@ -98,38 +97,6 @@ class IPixelButton(ButtonEntity):
             import json
             json_data = json.dumps({"state": state, "temp": temp, "humidity": hum})
             await self.hub.async_send_command("send_image", [f"path=animation:weather_mode:{json_data}", "resize_method=fit"])
-        elif self._action == "show_dashboard":
-            # 1. Sun data
-            sun = self.hub.hass.states.get("sun.sun")
-            if sun:
-                s_state = sun.state
-                elev = sun.attributes.get("elevation", 0)
-                azimuth = sun.attributes.get("azimuth", 180)
-                next_rising = sun.attributes.get("next_rising", "")
-                next_setting = sun.attributes.get("next_setting", "")
-            else:
-                s_state, elev, azimuth, next_rising, next_setting = "unknown", 0, 180, "", ""
-                
-            # 2. Weather data
-            w_states = self.hub.hass.states.async_all("weather")
-            if w_states:
-                w = w_states[0]
-                w_state, temp, hum = w.state, w.attributes.get("temperature", 0), w.attributes.get("humidity", 0)
-            else:
-                w_state, temp, hum = "unknown", 0, 0
-                
-            # 3. Time
-            from homeassistant.util import dt as dt_util
-            now = dt_util.now().strftime("%H:%M")
-            
-            import json
-            json_data = json.dumps({
-                "state": w_state, "temp": temp, "humidity": hum,
-                "sun_state": s_state, "elevation": elev, "azimuth": azimuth,
-                "next_rising": next_rising, "next_setting": next_setting,
-                "current_time": now
-            })
-            await self.hub.async_send_command("send_image", [f"path=animation:dashboard:{json_data}", "resize_method=fit"])
         elif self._action == "set_clock_mode":
             await self.hub.async_send_command("set_clock_mode", [f"style={d['clock_style']}", "show_date=True", "format_24=True"])
         elif self._action == "set_orientation":
