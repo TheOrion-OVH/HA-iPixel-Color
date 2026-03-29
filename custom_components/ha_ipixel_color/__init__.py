@@ -11,6 +11,58 @@ from .coordinator import IPixelHub
 
 _LOGGER = logging.getLogger(__name__)
 
+class IPixelProcessManager:
+    """Manages the background pypixelcolor.websocket process, auto-restarting it if it fails."""
+    def __init__(self, hass, cmd):
+        self.hass = hass
+        self.cmd = cmd
+        self.process = None
+        self._running = True
+        self.task = None
+
+    async def start(self):
+        self.task = self.hass.loop.create_task(self._run_loop())
+        
+    async def _run_loop(self):
+        while self._running:
+            _LOGGER.info("Starting iPixel WebSocket Server...")
+            try:
+                self.process = await asyncio.create_subprocess_exec(
+                    *self.cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT
+                )
+                
+                while True:
+                    line = await self.process.stdout.readline()
+                    if not line:
+                        break
+                    line_str = line.decode().rstrip()
+                    _LOGGER.info("iPixel Server: %s", line_str)
+                    
+                await self.process.wait()
+            except Exception as e:
+                _LOGGER.error("Error executing iPixel server: %s", e)
+                
+            if not self._running:
+                break
+                
+            _LOGGER.warning("iPixel WebSocket Server stopped unexpectedly. Restarting in 5s...")
+            await asyncio.sleep(5)
+
+    async def stop(self):
+        self._running = False
+        if self.process:
+            try:
+                self.process.terminate()
+                await asyncio.wait_for(self.process.wait(), timeout=5.0)
+            except asyncio.TimeoutError:
+                self.process.kill()
+            except ProcessLookupError:
+                pass
+        if self.task:
+            self.task.cancel()
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up iPixel from a config entry."""
     mac_address = entry.data.get(CONF_MAC_ADDRESS)
@@ -32,25 +84,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "--port", str(port)
         ]
         
-        _LOGGER.info("Starting iPixel WebSocket Server: %s", " ".join(cmd))
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT
-        )
+        manager = IPixelProcessManager(hass, cmd)
+        await manager.start()
         
-        async def _log_output():
-            while True:
-                line = await process.stdout.readline()
-                if not line:
-                    break
-                _LOGGER.error("iPixel Server: %s", line.decode().rstrip())
-                
-        hass.loop.create_task(_log_output())
-        
-        # Let the websocket server start
+        # Give it a bit of time to start before moving on
         await asyncio.sleep(2)
-        hass.data[DOMAIN][f"{entry.entry_id}_process"] = process
+        hass.data[DOMAIN][f"{entry.entry_id}_process"] = manager
     
     hub = IPixelHub(hass, ws_uri)
     hub.mac_address = mac_address
@@ -68,16 +107,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     process_key = f"{entry.entry_id}_process"
     if process_key in hass.data[DOMAIN]:
-        process = hass.data[DOMAIN][process_key]
+        manager = hass.data[DOMAIN][process_key]
         _LOGGER.info("Stopping iPixel WebSocket Server")
-        try:
-            process.terminate()
-            await asyncio.wait_for(process.wait(), timeout=5.0)
-        except asyncio.TimeoutError:
-            process.kill()
-        except Exception as e:
-            _LOGGER.warning("Error stopping iPixel server: %s", e)
-            
+        await manager.stop()
         hass.data[DOMAIN].pop(process_key)
 
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
