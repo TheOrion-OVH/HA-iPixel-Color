@@ -34,7 +34,7 @@ class IPixelButton(ButtonEntity):
         self._attr_icon = icon
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, hub.mac_address)},
-            name=DEFAULT_NAME,
+            name=hub.name,
             manufacturer="iPixel",
         )
 

@@ -2,6 +2,7 @@
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
+from homeassistant.const import CONF_NAME
 
 from .const import DOMAIN, CONF_MAC_ADDRESS, CONF_WS_URL, DEFAULT_NAME
 
@@ -18,12 +19,13 @@ class IPixelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(user_input[CONF_MAC_ADDRESS])
             self._abort_if_unique_id_configured()
             
-            return self.async_create_entry(title=DEFAULT_NAME, data=user_input)
+            return self.async_create_entry(title=user_input.get(CONF_NAME, DEFAULT_NAME), data=user_input)
 
         data_schema = vol.Schema(
             {
+                vol.Required(CONF_NAME, default=DEFAULT_NAME): str,
                 vol.Required(CONF_MAC_ADDRESS): str,
-                vol.Optional(CONF_WS_URL): str,
+                vol.Required(CONF_WS_URL): str,
             }
         )
 

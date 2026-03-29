@@ -267,6 +267,7 @@ class IPixelHub:
         self.hass = hass
         self.ws_uri = ws_uri
         self.mac_address = None
+        self.name = None
         self.data = {
             "message": "Hello",
             "color": "ffffff",

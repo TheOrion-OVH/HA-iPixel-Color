@@ -1,0 +1,16 @@
+services:
+  ipixel-api:
+    build: .
+    container_name: ipixel-api
+    restart: unless-stopped
+
+    network_mode: host
+
+    privileged: true          
+    volumes:
+      - /var/run/dbus:/var/run/dbus  
+
+    env_file:
+      - .env
+    command: >
+      sh -c "python3 -m pypixelcolor.websocket -a $${IPIXEL_ADDRESS} --host $${IPIXEL_HOST} --port $${IPIXEL_PORT:-4444}"

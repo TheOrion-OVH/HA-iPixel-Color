@@ -20,7 +20,7 @@ class IPixelPowerSwitch(SwitchEntity):
         self._attr_unique_id = f"{hub.mac_address}_power"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, hub.mac_address)},
-            name=DEFAULT_NAME,
+            name=hub.name,
             manufacturer="iPixel",
         )
         self._attr_is_on = True
