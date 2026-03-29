@@ -43,10 +43,16 @@ class IPixelButton(ButtonEntity):
         d = self.hub.data
         if self._action == "send_text":
             anim = d["anim_txt"].split(' ')[0]
-            await self.hub.async_send_command("send_text", [
+            params = [
                 f"text={d['message']}", f"color={d['color']}", f"bg_color={d['bg_color']}",
                 f"font={d['font']}", f"animation={anim}", f"speed={int(d['speed'])}"
-            ])
+            ]
+            
+            rainbow = int(d.get('rainbow_mode', 0))
+            if rainbow > 0:
+                params.append(f"rainbow_mode={rainbow}")
+                
+            await self.hub.async_send_command("send_text", params)
         elif self._action == "send_image":
             await self.hub.async_send_command("send_image", [f"path={d['image_url']}", f"resize_method={d['resize']}"])
         elif self._action == "set_brightness":

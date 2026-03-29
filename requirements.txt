@@ -1,0 +1,3 @@
+pypixelcolor
+flask
+python-dotenv

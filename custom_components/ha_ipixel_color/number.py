@@ -10,10 +10,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     """Set up the iPixel number platform."""
     hub = hass.data[DOMAIN][entry.entry_id]
     numbers = [
-        IPixelNumber(hub, "Luminosité", "brightness", 0, 100, "mdi:brightness-6"),
-        IPixelNumber(hub, "Vitesse animation", "speed", 1, 100, "mdi:speedometer"),
-        IPixelNumber(hub, "Pixel X", "pixel_x", 0, 31, "mdi:arrow-right"),
-        IPixelNumber(hub, "Pixel Y", "pixel_y", 0, 31, "mdi:arrow-down"),
+        IPixelNumber(hub, "Luminosité", "brightness", 0, 255, "mdi:brightness-6"),
+        IPixelNumber(hub, "Vitesse", "speed", 0, 100, "mdi:speedometer"),
+        IPixelNumber(hub, "Position Pixel X", "pixel_x", 0, 31, "mdi:axis-x-arrow"),
+        IPixelNumber(hub, "Position Pixel Y", "pixel_y", 0, 31, "mdi:axis-y-arrow"),
+        IPixelNumber(hub, "Mode Arc-en-Ciel", "rainbow_mode", 0, 9, "mdi:rainbow"),
     ]
     async_add_entities(numbers)
 

@@ -283,8 +283,43 @@ class IPixelHub:
             "pixel_x": 0,
             "pixel_y": 0,
             "pixel_color": "FF0000",
-            "anim_gif": "🔥 Feu"
+            "anim_gif": "🔥 Feu",
+            "rainbow_mode": 0,
+            "weather_sync": False
         }
+
+    async def async_update_weather_sun(self):
+        """Send current weather/sun state to display."""
+        if not self.data.get("weather_sync", False):
+            return
+
+        # Get sun state
+        sun_state = self.hass.states.get("sun.sun")
+        is_day = sun_state.state == "above_horizon" if sun_state else True
+
+        # Get weather state (find first weather entity)
+        weather_states = self.hass.states.async_all("weather")
+        state = weather_states[0].state if weather_states else None
+
+        # Map to openweathermap icon
+        icon_code = "01d"
+        if state in ("sunny", "clear-night"):
+            icon_code = "01d" if is_day else "01n"
+        elif state == "partlycloudy":
+            icon_code = "02d" if is_day else "02n"
+        elif state == "cloudy":
+            icon_code = "03d" if is_day else "03n"
+        elif state in ("fog", "mists"):
+            icon_code = "50d" if is_day else "50n"
+        elif state in ("rainy", "pouring"):
+            icon_code = "10d"
+        elif state in ("lightning", "lightning-rainy"):
+            icon_code = "11d"
+        elif state in ("snowy", "snowy-rainy"):
+            icon_code = "13d"
+
+        url = f"https://openweathermap.org/img/wn/{icon_code}@2x.png"
+        await self.async_send_command("send_image", [f"path={url}", "resize_method=fit"])
 
     async def generate_python_animation_hex(self, anim_name: str, num_frames=30) -> str:
         """Generation of GIF inside an executor."""

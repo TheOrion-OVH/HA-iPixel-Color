@@ -1,7 +1,7 @@
 services:
-  ipixel-api:
+  ipixel-color-websocket:
     build: .
-    container_name: ipixel-api
+    container_name: ipixel-color-websocket
     restart: unless-stopped
 
     network_mode: host
