@@ -6,7 +6,7 @@ LOGGER = getLogger(__package__)
 
 DOMAIN = "ha_ipixel_color"
 CONF_WS_URL = "ws_url"
-DEFAULT_NAME = "HA BKLight Color"
+DEFAULT_NAME = "HA iPixel Color"
 
 PLATFORMS = [
     Platform.SWITCH,

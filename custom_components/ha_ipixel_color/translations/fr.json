@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connecter un panneau BKLight",
-        "description": "Entrer l'URL WebSocket du panneau LED BKLight",
+        "title": "Connecter un panneau iPixel",
+        "description": "Entrer l'URL WebSocket du panneau LED iPixel",
         "data": {
           "name": "Nom du panneau",
           "ws_url": "URL WebSocket (Requis, ex: ws://ip:5042)"
@@ -15,7 +15,7 @@
       "unknown": "Erreur inattendue"
     },
     "abort": {
-      "already_configured": "Cet appareil BKLight est déjà configuré dans Home Assistant."
+      "already_configured": "Cet appareil iPixel est déjà configuré dans Home Assistant."
     }
   }
 }
