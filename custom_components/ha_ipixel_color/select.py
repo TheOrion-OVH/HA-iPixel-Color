@@ -41,7 +41,7 @@ class IPixelSelect(SelectEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, hub.entry_id)},
             name=hub.name,
-            manufacturer="iPixel",
+            manufacturer="BKLight",
         )
 
     async def async_select_option(self, option: str) -> None:

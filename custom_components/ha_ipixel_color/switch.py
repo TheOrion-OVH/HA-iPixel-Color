@@ -24,7 +24,7 @@ class IPixelPowerSwitch(SwitchEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, hub.entry_id)},
             name=hub.name,
-            manufacturer="iPixel",
+            manufacturer="BKLight",
         )
         self._attr_is_on = True
 
