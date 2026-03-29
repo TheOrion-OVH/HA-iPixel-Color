@@ -33,7 +33,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ]
         
         _LOGGER.info("Starting iPixel WebSocket Server: %s", " ".join(cmd))
-        process = subprocess.Popen(cmd)
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+        
+        async def _log_output():
+            while True:
+                line = await process.stdout.readline()
+                if not line:
+                    break
+                _LOGGER.error("iPixel Server: %s", line.decode().rstrip())
+                
+        hass.loop.create_task(_log_output())
         
         # Let the websocket server start
         await asyncio.sleep(2)
@@ -57,11 +70,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if process_key in hass.data[DOMAIN]:
         process = hass.data[DOMAIN][process_key]
         _LOGGER.info("Stopping iPixel WebSocket Server")
-        process.terminate()
         try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
+            process.terminate()
+            await asyncio.wait_for(process.wait(), timeout=5.0)
+        except asyncio.TimeoutError:
             process.kill()
+        except Exception as e:
+            _LOGGER.warning("Error stopping iPixel server: %s", e)
+            
         hass.data[DOMAIN].pop(process_key)
 
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
