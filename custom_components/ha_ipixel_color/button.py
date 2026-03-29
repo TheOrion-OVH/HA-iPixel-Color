@@ -69,10 +69,20 @@ class IPixelButton(ButtonEntity):
             if sun:
                 state = sun.state
                 elev = sun.attributes.get("elevation", 0)
+                azimuth = sun.attributes.get("azimuth", 180)
+                next_rising = sun.attributes.get("next_rising", "")
+                next_setting = sun.attributes.get("next_setting", "")
             else:
-                state, elev = "unknown", 0
+                state, elev, azimuth, next_rising, next_setting = "unknown", 0, 180, "", ""
+            
             import json
-            json_data = json.dumps({"state": state, "elevation": elev})
+            json_data = json.dumps({
+                "state": state, 
+                "elevation": elev, 
+                "azimuth": azimuth,
+                "next_rising": next_rising,
+                "next_setting": next_setting
+            })
             await self.hub.async_send_command("send_image", [f"path=animation:sun_mode:{json_data}", "resize_method=fit"])
         elif self._action == "show_weather":
             w_states = self.hub.hass.states.async_all("weather")

@@ -279,7 +279,7 @@ class IPixelHub:
             "speed": 80,
             "image_url": "",
             "resize": "crop",
-            "brightness": 80,
+            "brightness": 50,
             "clock_style": "1",
             "orientation": "0 — Normal",
             "pixel_x": 0,

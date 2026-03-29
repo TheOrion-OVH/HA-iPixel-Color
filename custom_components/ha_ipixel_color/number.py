@@ -10,7 +10,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     """Set up the iPixel number platform."""
     hub = hass.data[DOMAIN][entry.entry_id]
     numbers = [
-        IPixelNumber(hub, "Luminosité", "brightness", 0, 255, "mdi:brightness-6"),
+        IPixelNumber(hub, "Luminosité", "brightness", 0, 100, "mdi:brightness-6"),
         IPixelNumber(hub, "Vitesse", "speed", 0, 100, "mdi:speedometer"),
         IPixelNumber(hub, "Position Pixel X", "pixel_x", 0, 31, "mdi:axis-x-arrow"),
         IPixelNumber(hub, "Position Pixel Y", "pixel_y", 0, 31, "mdi:axis-y-arrow"),
@@ -44,6 +44,7 @@ class IPixelNumber(NumberEntity):
         self._attr_native_value = v
         self.async_write_ha_state()
 
-        # Appliquer instantanément la luminosité
+        # Appliquer instantanément la luminosité (conversion 0-100 -> 0-255)
         if self._key == "brightness":
-            await self.hub.async_send_command("set_brightness", [f"level={v}"])
+            v_send = int(v * 255 / 100)
+            await self.hub.async_send_command("set_brightness", [f"level={v_send}"])

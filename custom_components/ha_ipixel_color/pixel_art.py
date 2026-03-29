@@ -71,7 +71,15 @@ class SunAnimation:
         self.frame = 0
         self.state = data.get("state", "above_horizon")
         self.elevation = float(data.get("elevation", 20))
+        self.azimuth = float(data.get("azimuth", 180))
+        
+        # Prochain événement
+        self.next_rising = data.get("next_rising", "")
+        self.next_setting = data.get("next_setting", "")
+        
         self._current_y = self._target_sun_y()
+        self._current_x = self._target_sun_x()
+        
         random.seed(42)
         self._stars = [(random.randint(1, W - 2), random.randint(1, 20)) for _ in range(self.STAR_COUNT)]
         random.seed()
@@ -80,32 +88,93 @@ class SunAnimation:
         t = (self.elevation + 90) / 180.0
         return int(lerp(24, 3, t))
 
+    def _target_sun_x(self):
+        # Azimuth: 90 (Est) -> 16 (Milieu), 180 (Sud) -> 16, 270 (Ouest) -> 31?
+        # On va mapper de 90° à 270° sur 0 à 21 (zone gauche avant le panneau)
+        if self.azimuth < 90: return 0
+        if self.azimuth > 270: return 21
+        t = (self.azimuth - 90) / 180.0
+        return int(lerp(2, 19, t))
+
+    def _draw_panel(self, d):
+        # Fond du panneau (repris de WeatherAnimation)
+        d.line([(21, 0), (21, W - 1)], fill=(100, 120, 160))
+        
+        # Titre et Heure
+        is_next_set = self.state == "above_horizon"
+        event_time = self.next_setting if is_next_set else self.next_rising
+        
+        if event_time:
+            # Format "2026-03-29T19:42:00+00:00" -> "19:42" (simpliste)
+            try:
+                t_str = event_time.split("T")[1][:5]
+            except:
+                t_str = "--:--"
+            
+            label = "SET" if is_next_set else "RISE"
+            draw_text(d, label, 23, 4, (255, 200, 100) if is_next_set else (100, 200, 255))
+            draw_text(d, t_str, 22, 12, (255, 255, 255))
+        
+        # Petit icône décorative en bas
+        y_bot = 22
+        if is_next_set:
+            d.point((26, y_bot), fill=(255, 100, 0)) # Petit soleil qui couche
+            d.line([(24, y_bot+1), (28, y_bot+1)], fill=(255, 160, 0))
+        else:
+            d.point((26, y_bot+1), fill=(100, 150, 255)) # Petite lune qui monte
+            d.point((27, y_bot), fill=(200, 200, 255))
+
     def next_frame(self) -> 'Image.Image':
         is_day = self.state == "above_horizon"
         target_y = self._target_sun_y()
+        target_x = self._target_sun_x()
+        
         self._current_y = lerp(self._current_y, target_y, 0.15)
-        cy, cx = int(round(self._current_y)), 16
+        self._current_x = lerp(self._current_x, target_x, 0.15)
+        
+        cy, cx = int(round(self._current_y)), int(round(self._current_x))
         top_col, bot_col = sky_color(self.elevation if is_day else -30)
+        
         img = Image.new("RGB", (W, W), top_col)
         d = ImageDraw.Draw(img)
+        
+        # Ciel dégradé
         for row in range(W):
             t = row / (W - 1)
             d.line([(0, row), (W - 1, row)], fill=lerp_color(top_col, bot_col, t))
+            
         if not is_day:
             for i, (sx, sy) in enumerate(self._stars):
                 brightness = 255 if (i + self.frame // 4) % 7 != 0 else 100
-                d.point((sx, sy), fill=(brightness, brightness, brightness))
+                if sx < 21: # Ne pas dessiner sous le panneau
+                    d.point((sx, sy), fill=(brightness, brightness, brightness))
+                    
         horizon_y = 26
         d.line([(0, horizon_y), (W - 1, horizon_y)], fill=(30, 40, 80))
+        
         if is_day and cy <= horizon_y:
             self._draw_sun(d, cx, cy)
         elif not is_day and cy <= horizon_y:
             self._draw_moon(d, cx, cy)
+            
+        # Reflets dynamiques (calés sur CX)
         reflet_col = (255, 130, 40) if is_day else (80, 90, 200)
-        if self.frame % 3 != 0:
-            for _ in range(4):
-                ry, rx = random.randint(horizon_y, W - 1), random.randint(8, W - 8)
-                d.point((rx, ry), fill=reflet_col)
+        if self.frame % 2 == 0:
+            for _ in range(3):
+                ry = random.randint(horizon_y + 1, W - 1)
+                rx = cx + random.randint(-4, 4)
+                if 0 <= rx < 21:
+                    d.point((rx, ry), fill=reflet_col)
+                    
+        # Application du filtre panneau (dimming zone droite)
+        for x in range(22, W):
+            for y in range(W):
+                r, g, b = img.getpixel((x, y))
+                img.putpixel((x, y), (r // 2 + 10, g // 2 + 15, b // 2 + 30))
+                
+        d = ImageDraw.Draw(img)
+        self._draw_panel(d)
+        
         self.frame += 1
         return img
 
