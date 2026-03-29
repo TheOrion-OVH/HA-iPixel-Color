@@ -5,7 +5,8 @@
         "title": "Connecter un panneau iPixel",
         "description": "Entrer l'adresse MAC du panneau LED iPixel pour regrouper les entités sous un seul appareil.",
         "data": {
-          "mac_address": "Adresse MAC (Bluetooth)"
+          "mac_address": "Adresse MAC (Bluetooth)",
+          "ws_url": "URL WebSocket (Optionnel, ex: ws://ip:5042)"
         }
       }
     },

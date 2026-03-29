@@ -6,7 +6,7 @@ import sys
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, PLATFORMS, CONF_MAC_ADDRESS, CONF_HOST
+from .const import DOMAIN, PLATFORMS, CONF_MAC_ADDRESS, CONF_WS_URL
 from .coordinator import IPixelHub
 
 _LOGGER = logging.getLogger(__name__)
@@ -14,28 +14,35 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up iPixel from a config entry."""
     mac_address = entry.data.get(CONF_MAC_ADDRESS)
-    port = 5042
-    ws_uri = f"ws://127.0.0.1:{port}"
+    ws_url = entry.data.get(CONF_WS_URL)
     
-    cmd = [
-        sys.executable, "-m", "pypixelcolor.websocket",
-        "-a", mac_address,
-        "--host", "127.0.0.1",
-        "--port", str(port)
-    ]
-    
-    _LOGGER.info("Starting iPixel WebSocket Server: %s", " ".join(cmd))
-    process = subprocess.Popen(cmd)
-    
-    # Let the websocket server start
-    await asyncio.sleep(2)
+    hass.data.setdefault(DOMAIN, {})
+
+    if ws_url:
+        _LOGGER.info("Connecting to remote iPixel WebSocket Server at %s", ws_url)
+        ws_uri = ws_url
+    else:
+        port = 5042
+        ws_uri = f"ws://127.0.0.1:{port}"
+        
+        cmd = [
+            sys.executable, "-m", "pypixelcolor.websocket",
+            "-a", mac_address,
+            "--host", "127.0.0.1",
+            "--port", str(port)
+        ]
+        
+        _LOGGER.info("Starting iPixel WebSocket Server: %s", " ".join(cmd))
+        process = subprocess.Popen(cmd)
+        
+        # Let the websocket server start
+        await asyncio.sleep(2)
+        hass.data[DOMAIN][f"{entry.entry_id}_process"] = process
     
     hub = IPixelHub(hass, ws_uri)
     hub.mac_address = mac_address
 
-    hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = hub
-    hass.data[DOMAIN][f"{entry.entry_id}_process"] = process
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     

@@ -3,7 +3,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, CONF_MAC_ADDRESS, CONF_HOST, DEFAULT_NAME
+from .const import DOMAIN, CONF_MAC_ADDRESS, CONF_WS_URL, DEFAULT_NAME
 
 class IPixelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for iPixel."""
@@ -23,6 +23,7 @@ class IPixelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         data_schema = vol.Schema(
             {
                 vol.Required(CONF_MAC_ADDRESS): str,
+                vol.Optional(CONF_WS_URL): str,
             }
         )
 
