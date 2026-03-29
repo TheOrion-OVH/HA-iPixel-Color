@@ -302,6 +302,9 @@ class IPixelHub:
             elif anim_name.startswith("weather_mode:"):
                 data = json.loads(anim_name.split(":", 1)[1])
                 anim_obj = WeatherAnimation(data)
+            elif anim_name.startswith("dashboard:"):
+                data = json.loads(anim_name.split(":", 1)[1])
+                anim_obj = DashboardAnimation(data)
             else:
                 cls = ANIMATION_CLASSES.get(anim_name)
                 if not cls:

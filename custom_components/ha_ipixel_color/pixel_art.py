@@ -136,37 +136,16 @@ class SunAnimation:
     def _draw_panel(self, d):
         _draw_panel_bg(d)
         is_next_set = self.state == "above_horizon"
-        event_time = self.next_setting if is_next_set else self.next_rising
-        t_str = _parse_time(event_time) if event_time else "--:--"
-
+        
+        # Petit icône décorative à la place du texte
+        y_center = 16
+        icon_col = (255, 120, 30) if is_next_set else (180, 200, 255)
         if is_next_set:
-            label_col = (255, 200, 80)
-            time_col = (255, 170, 60)
-            icon_col = (255, 120, 30)
-            label = "SET"
+            d.point((26, y_center), fill=(255, 100, 0)) 
+            d.line([(24, y_center+1), (28, y_center+1)], fill=(255, 160, 0))
         else:
-            label_col = (120, 200, 255)
-            time_col = (160, 220, 255)
-            icon_col = (180, 200, 255)
-            label = "RISE"
-
-        draw_text_shadow(d, label, 23, 3, label_col)
-        _draw_separator(d, 10)
-
-        h, m = t_str[:2], t_str[3:5]
-        blink = (self.frame // 8) % 2 == 0
-        draw_text_shadow(d, h, 23, 13, time_col)
-        if blink:
-            draw_text_shadow(d, ":", 27, 13, (200, 200, 200))
-        draw_text_shadow(d, m, 28, 13, time_col)
-
-        _draw_separator(d, 21)
-
-        elev_str = f"{int(self.elevation):+d}"
-        elev_col = (100, 255, 140) if self.elevation > 0 else (180, 140, 255)
-        draw_text_shadow(d, elev_str[:3], 23, 24, elev_col)
-        d.point((30, 24), fill=icon_col)
-        d.point((30, 25), fill=icon_col)
+            d.point((26, y_center+1), fill=(100, 150, 255))
+            d.point((27, y_center), fill=(200, 200, 255))
 
     def next_frame(self):
         is_day = self.state == "above_horizon"
@@ -291,13 +270,9 @@ class WeatherAnimation:
         if flash:
             t_col = (255, 255, 200)
 
-        draw_text_shadow(d, f"{self.temp}°", 23, 2, t_col)
-
-        if self.feels_like != self.temp:
-            fl_col = _darken(t_col, 0.85)
-            draw_text_shadow(d, f"{self.feels_like}", 23, 9, fl_col)
-
-        _draw_separator(d, 13)
+        draw_text(d, f"{self.temp}°", 24, 4, t_col)
+        
+        _draw_separator(d, 16)
 
         if self.humidity >= 80:
             h_col = (80, 160, 255)
@@ -305,20 +280,8 @@ class WeatherAnimation:
             h_col = (120, 200, 200)
         else:
             h_col = (100, 210, 130)
-        draw_text_shadow(d, f"{self.humidity}%", 23, 15, h_col)
 
-        _draw_separator(d, 21)
-
-        if self.wind > 40:
-            w_col = (255, 100, 100)
-        elif self.wind > 20:
-            w_col = (255, 200, 100)
-        else:
-            w_col = (180, 220, 255)
-        draw_text_shadow(d, f"{self.wind}", 23, 23, w_col)
-        d.point((30, 23), fill=w_col)
-        d.point((30, 24), fill=w_col)
-        d.point((29, 25), fill=w_col)
+        draw_text(d, f"{self.humidity}%", 24, 22, h_col)
 
     def _draw_icon(self, d, img):
         s, cx, cy = self.state, 10, 12
@@ -487,44 +450,44 @@ class DashboardAnimation:
         d = ImageDraw.Draw(img)
         _draw_panel_bg(d)
 
+        # Heure (Centrée horizontalement sur le panneau 22-31 -> milieu 26)
         h, m = self.time_str[:2], self.time_str[3:5]
         blink = (self.frame // 8) % 2 == 0
-        draw_text_shadow(d, h, 22, 1, (255, 255, 255))
+        draw_text(d, h, 22, 1, (255, 255, 255))
         if blink:
-            draw_text_shadow(d, ":", 26, 1, (200, 200, 200))
-        draw_text_shadow(d, m, 27, 1, (255, 255, 255))
+            draw_text(d, ":", 26, 1, (200, 200, 200))
+        draw_text(d, m, 27, 1, (255, 255, 255))
 
         _draw_separator(d, 8)
 
+        # Prochain événement solaire (Icone compacte seulement)
         is_next_set = self.sun.state == "above_horizon"
-        event_time = self.sun.next_setting if is_next_set else self.sun.next_rising
-        if event_time:
-            t_str = _parse_time(event_time)
-            e_col = (255, 160, 40) if is_next_set else (120, 190, 255)
-            draw_text_shadow(d, t_str[:2], 22, 10, e_col)
-            draw_text_shadow(d, t_str[3:5], 27, 10, e_col)
+        y_ev = 11
+        icon_col = (255, 120, 30) if is_next_set else (180, 200, 255)
+        if is_next_set:
+            d.point((26, y_ev), fill=(255, 100, 0)) 
+            d.line([(24, y_ev+1), (28, y_ev+1)], fill=(255, 160, 0))
+        else:
+            d.point((26, y_ev+1), fill=(100, 150, 255))
+            d.point((27, y_ev), fill=(200, 200, 255))
 
         _draw_separator(d, 16)
 
-        if self.temp > 25:
-            t_col = (255, 110, 50)
-        elif self.temp > 15:
-            t_col = (255, 195, 70)
-        elif self.temp > 5:
-            t_col = (150, 215, 255)
-        else:
-            t_col = (110, 175, 255)
-        draw_text_shadow(d, f"{self.temp}°", 22, 18, t_col)
+        # Température et Humidité (Plus petits/nets)
+        if self.temp > 25: t_col = (255, 110, 50)
+        elif self.temp > 15: t_col = (255, 195, 70)
+        elif self.temp > 5: t_col = (150, 215, 255)
+        else: t_col = (110, 175, 255)
+        
+        draw_text(d, f"{self.temp}°", 23, 18, t_col)
 
         _draw_separator(d, 24)
 
-        if self.hum >= 80:
-            h_col = (80, 160, 255)
-        elif self.hum >= 60:
-            h_col = (120, 200, 200)
-        else:
-            h_col = (100, 210, 130)
-        draw_text_shadow(d, f"{self.hum}%", 22, 26, h_col)
+        if self.hum >= 80: h_col = (80, 160, 255)
+        elif self.hum >= 60: h_col = (120, 200, 200)
+        else: h_col = (100, 210, 130)
+        
+        draw_text(d, f"{self.hum}%", 23, 26, h_col)
 
         self.frame += 1
         self.sun.frame = self.frame
