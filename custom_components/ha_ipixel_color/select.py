@@ -1,5 +1,6 @@
 """Select platform for iPixel."""
 from homeassistant.components.select import SelectEntity
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
@@ -12,8 +13,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     selects = [
         IPixelSelect(hub, "Animation", "anim_gif", [
             "Sélectionner...", "🔥 Feu", "💻 Matrix", "❄️ Neige", "🌌 Aurora",
-            "🌊 Vagues", "🌈 Rainbow", "🌀 Plasma", "👾 Pac-Man", "🎶 Equalizer"
+            "🌊 Vagues", "🌈 Rainbow", "🌀 Plasma", "👾 Pac-Man", "🎶 Equalizer",
+            "🎊 Confettis", "🎆 Feu d'artifice", "🐍 Snake", "🧱 Tetris",
+            "🦖 Dino", "🐧 Pingouin"
         ], "mdi:gif"),
+        IPixelSelect(hub, "Choix PFC", "pfc_choice", ["Pierre", "Feuille", "Ciseaux"], "mdi:hand-back-fist"),
         IPixelSelect(hub, "Police", "font", ["CUSONG", "SIMSUN", "VCR_OSD_MONO"], "mdi:format-font"),
         IPixelSelect(hub, "Animation texte", "anim_txt", [
             "0 — Statique", "1 — Défilement ←", "2 — Défilement →",
@@ -27,7 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     ]
     async_add_entities(selects)
 
-class IPixelSelect(SelectEntity):
+class IPixelSelect(SelectEntity, RestoreEntity):
     """iPixel Dropdown Select."""
     
     def __init__(self, hub, name, key, options, icon):
@@ -43,6 +47,14 @@ class IPixelSelect(SelectEntity):
             name=hub.name,
             manufacturer="BKLight",
         )
+
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        await super().async_added_to_hass()
+        if (state := await self.async_get_last_state()) is not None:
+            if state.state in self._attr_options:
+                self._attr_current_option = state.state
+                self.hub.data[self._key] = state.state
 
     async def async_select_option(self, option: str) -> None:
         """Update the value."""

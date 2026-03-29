@@ -1,5 +1,6 @@
 """Number platform for iPixel."""
 from homeassistant.components.number import NumberEntity
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
@@ -18,7 +19,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     ]
     async_add_entities(numbers)
 
-class IPixelNumber(NumberEntity):
+class IPixelNumber(NumberEntity, RestoreEntity):
     """iPixel Number Input."""
     
     def __init__(self, hub, name, key, min_val, max_val, icon):
@@ -37,6 +38,18 @@ class IPixelNumber(NumberEntity):
             manufacturer="BKLight",
         )
 
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        await super().async_added_to_hass()
+        if (state := await self.async_get_last_state()) is not None:
+            try:
+                val = float(state.state)
+                if self._attr_native_min_value <= val <= self._attr_native_max_value:
+                    self._attr_native_value = int(val)
+                    self.hub.data[self._key] = int(val)
+            except (ValueError, TypeError):
+                pass
+
     async def async_set_native_value(self, value: float) -> None:
         """Update the value."""
         v = int(value)
@@ -44,6 +57,6 @@ class IPixelNumber(NumberEntity):
         self._attr_native_value = v
         self.async_write_ha_state()
 
-        # Appliquer instantanément la luminosité (pas de conversion car le proxy attend 0-100)
+        # Appliquer instantanément la luminosité
         if self._key == "brightness":
             await self.hub.async_send_command("set_brightness", [f"level={v}"])

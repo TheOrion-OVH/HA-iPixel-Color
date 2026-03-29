@@ -1,5 +1,6 @@
 """Text platform for iPixel."""
 from homeassistant.components.text import TextEntity
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
@@ -18,7 +19,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     ]
     async_add_entities(texts)
 
-class IPixelText(TextEntity):
+class IPixelText(TextEntity, RestoreEntity):
     """iPixel Text Input."""
     
     def __init__(self, hub, name, key, max_length, icon):
@@ -34,6 +35,13 @@ class IPixelText(TextEntity):
             name=hub.name,
             manufacturer="BKLight",
         )
+
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        await super().async_added_to_hass()
+        if (state := await self.async_get_last_state()) is not None:
+            self._attr_native_value = state.state
+            self.hub.data[self._key] = state.state
 
     async def async_set_value(self, value: str) -> None:
         """Update the value."""

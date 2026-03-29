@@ -16,7 +16,14 @@ Cette intégration permet de contrôler vos **dalles LED 32x32 BKLight** (achet�
 - **Redimensionnement Intelligent** : L'intégration adapte automatiquement la taille (Crop ou Fit) pour un rendu parfait sur 32x32.
 
 ### 🚀 Animations d'Ambiance
-- **Générateurs Inclus** : 9 animations cultes prêtes à l'emploi (Feu, Matrix, Aurora, Plasma, Pac-Man, Vagues, Neige, Rainbow, Equalizer).
+- **Générateurs Inclus** : 15 animations cultes (Feu, Matrix, Aurora, Plasma, Pac-Man, Vagues, Neige, Rainbow, Equalizer, Confettis, Feu d'artifice, Snake, Tetris, Dino Google, Pingouin).
+
+### 🎮 Jeux Interactifs
+- **Pierre-Feuille-Ciseaux (PFC)** : Défiez votre dalle LED ! Choisissez votre coup dans le sélecteur et appuyez sur "Jouer PFC". La dalle affiche **instantanément** le duel et le gagnant.
+
+### 🖌️ Dessin & Création
+- **Dessin Pixel** : Contrôlez chaque pixel individuellement via automatisations pour créer vos propres motifs ou icônes statiques.
+
 
 ### ☀️ Mode Solaire Intelligent (Sun Sync)
 Votre dalle devient un véritable indicateur céleste synchronisé avec Home Assistant :
@@ -30,9 +37,13 @@ Un tableau de bord météo magnifique qui s'anime selon les conditions :
 - **Données en Temps Réel** : Affiche la température et l'humidité de vos capteurs HA avec un effet de "verre givré" translucide.
 
 ### 🛠️ Horloge & Paramètres de Précision
-- **Styles d'Heure** : Plusieurs styles d'affichage de l'horloge.
-- **Orientation Locale** : Faites pivoter l'affichage (0°, 90°, 180°, 270°) selon la pose de votre dalle.
-- **Dessin Pixel** : Contrôlez chaque pixel individuellement pour créer vos propres motifs via automatisations.
+- **Styles d'Heure** : Plusieurs styles d'affichage de l'horloge (0 à 8).
+- **Affichage Date** : Un interrupteur dédié permet de choisir d'afficher ou non la date. 📅
+- **Orientation** : Faites pivoter l'affichage (0°, 90°, 180°, 270°) instantanément.
+
+### 💾 Persistance & Robustesse
+- **Mémoire d'État** : Vos choix d'animations, de polices, d'orientation et de messages sont **sauvegardés automatiquement**. Après un redémarrage de Home Assistant, la dalle retrouve ses derniers réglages. ✅
+- **Interface Épurée** : Les sélecteurs (Luminosité, Orientation) appliquent les changements en temps réel, éliminant les boutons de validation inutiles.
 
 ---
 

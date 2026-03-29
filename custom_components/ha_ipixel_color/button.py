@@ -13,10 +13,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     buttons = [
         IPixelButton(hub, "Envoyer Message", "send_text", "mdi:send"),
         IPixelButton(hub, "Envoyer Image", "send_image", "mdi:image"),
-        IPixelButton(hub, "Appliquer luminosité", "set_brightness", "mdi:brightness-5"),
+        IPixelButton(hub, "Jouer PFC", "show_pfc", "mdi:gamepad-variant"),
         IPixelButton(hub, "Appliquer vitesse", "set_speed", "mdi:speedometer"),
         IPixelButton(hub, "Mode Horloge", "set_clock_mode", "mdi:clock-outline"),
-        IPixelButton(hub, "Appliquer Orientation", "set_orientation", "mdi:screen-rotation"),
         IPixelButton(hub, "Dessiner Pixel", "set_pixel", "mdi:square-edit-outline"),
         IPixelButton(hub, "Démarrer l'animation", "play_anim", "mdi:play-circle"),
         IPixelButton(hub, "Effacer écran", "clear", "mdi:monitor-off"),
@@ -58,8 +57,11 @@ class IPixelButton(ButtonEntity):
             await self.hub.async_send_command("send_text", params)
         elif self._action == "send_image":
             await self.hub.async_send_command("send_image", [f"path={d['image_url']}", f"resize_method={d['resize']}"])
-        elif self._action == "set_brightness":
-            await self.hub.async_send_command("set_brightness", [f"brightness={int(d['brightness'])}"])
+        elif self._action == "show_pfc":
+            import json
+            choice = d.get("pfc_choice", "Pierre").lower()
+            json_data = json.dumps({"choice": choice})
+            await self.hub.async_send_command("send_image", [f"path=animation:rps:{json_data}", "resize_method=fit"])
         elif self._action == "set_speed":
             await self.hub.async_send_command("set_speed", [f"speed={int(d['speed'])}"])
         elif self._action == "clear":
@@ -98,17 +100,17 @@ class IPixelButton(ButtonEntity):
             json_data = json.dumps({"state": state, "temp": temp, "humidity": hum})
             await self.hub.async_send_command("send_image", [f"path=animation:weather_mode:{json_data}", "resize_method=fit"])
         elif self._action == "set_clock_mode":
-            await self.hub.async_send_command("set_clock_mode", [f"style={d['clock_style']}", "show_date=True", "format_24=True"])
-        elif self._action == "set_orientation":
-            orient = d["orientation"].split(' ')[0]
-            await self.hub.async_send_command("set_orientation", [f"orientation={orient}"])
+            show_date = d.get("show_date", True)
+            await self.hub.async_send_command("set_clock_mode", [f"style={d['clock_style']}", f"show_date={show_date}", "format_24=True"])
         elif self._action == "set_pixel":
             await self.hub.async_send_command("set_pixel", [f"x={int(d['pixel_x'])}", f"y={int(d['pixel_y'])}", f"color={d['pixel_color']}"])
         elif self._action == "play_anim":
             mapping = {
                 '🔥 Feu': 'animation:fire', '💻 Matrix': 'animation:matrix', '❄️ Neige': 'animation:snow',
                 '🌌 Aurora': 'animation:aurora', '🌊 Vagues': 'animation:waves', '🌈 Rainbow': 'animation:rainbow',
-                '🌀 Plasma': 'animation:plasma', '👾 Pac-Man': 'animation:pacman', '🎶 Equalizer': 'animation:equalizer'
+                '🌀 Plasma': 'animation:plasma', '👾 Pac-Man': 'animation:pacman', '🎶 Equalizer': 'animation:equalizer',
+                '🎊 Confettis': 'animation:confetti', "🎆 Feu d'artifice": 'animation:firework', '🐍 Snake': 'animation:snake',
+                '🧱 Tetris': 'animation:tetris', '🦖 Dino': 'animation:dino', '🐧 Pingouin': 'animation:penguin'
             }
             path = mapping.get(d["anim_gif"], "animation:fire")
             await self.hub.async_send_command("send_image", [f"path={path}", "resize_method=crop"])

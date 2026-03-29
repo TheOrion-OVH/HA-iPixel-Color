@@ -1,11 +1,273 @@
 import math
 import random
+import colorsys
 try:
     from PIL import Image, ImageDraw
 except ImportError:
     pass
 
 W = 32
+
+def _new_frame() -> 'Image.Image':
+    return Image.new("RGB", (W, W), (0, 0, 0))
+
+class FireAnimation:
+    def __init__(self):
+        self.H = W + 4
+        self.buf = [[0.0] * W for _ in range(self.H)]
+    def next_frame(self) -> 'Image.Image':
+        for x in range(W):
+            self.buf[self.H-1][x] = random.uniform(0.7, 1.0)
+            self.buf[self.H-2][x] = random.uniform(0.5, 0.9)
+        new_buf = [row[:] for row in self.buf]
+        for y in range(1, self.H-1):
+            for x in range(W):
+                v = (self.buf[y][x] + self.buf[y+1][x] + self.buf[y+1][(x-1) % W] + self.buf[y+1][(x+1) % W]) / 4.0
+                v *= random.uniform(0.92, 0.99)
+                new_buf[y-1][x] = max(0.0, v)
+        self.buf = new_buf
+        img = _new_frame()
+        pixels = []
+        for y in range(W):
+            fy = y + (self.H - W)
+            for x in range(W):
+                t = max(0.0, min(1.0, self.buf[fy][x]))
+                if t < 0.3:
+                    r, g, b = int(t * 3 * 80), 0, 0
+                elif t < 0.6:
+                    r, g, b = 180 + int((t - 0.3) * 3 * 75), int((t - 0.3) * 3 * 80), 0
+                else:
+                    r, g, b = 255, 80 + int((t - 0.6) * 2.5 * 175), int((t - 0.6) * 2.5 * 60)
+                pixels.append((min(255, r), min(255, g), min(255, b)))
+        img.putdata(pixels)
+        return img
+
+class MatrixAnimation:
+    def __init__(self):
+        # We start with columns at various heights (some above the screen)
+        self.cols = []
+        for _ in range(W):
+            self.cols.append(self._make_col(random.randint(-W, W)))
+        self.buf = [[(0, 0, 0)] * W for _ in range(W)]
+        
+    def _make_col(self, start_y=None):
+        return {
+            "head": float(start_y if start_y is not None else -random.randint(5, 20)),
+            "speed": random.uniform(0.5, 1.8),
+            "len": random.randint(8, 24),
+            "sparkle": [random.random() for _ in range(32)] # Random phase for flickers
+        }
+
+    def next_frame(self) -> 'Image.Image':
+        # Fade the background for a "trail" effect
+        # We use a slightly faster fade to keep it clean (0.6-0.7)
+        self.buf = [[(int(r * 0.65), int(g * 0.7), int(b * 0.65)) for r, g, b in row] for row in self.buf]
+        
+        for x, col in enumerate(self.cols):
+            col["head"] += col["speed"]
+            
+            # If the tail has cleared the screen, reset the column
+            if col["head"] - col["len"] > W:
+                self.cols[x] = self._make_col()
+                col = self.cols[x]
+                
+            hy = int(col["head"])
+            for i in range(col["len"]):
+                y = hy - i
+                if 0 <= y < W:
+                    # Classic Matrix palette: very bright head, neon green trail
+                    # With some flickering "characters"
+                    flicker = math.sin(col["sparkle"][y % 32] + hy * 0.5) > 0.8
+                    
+                    if i == 0: # The "head" is white/very bright green
+                        self.buf[y][x] = (200, 255, 200)
+                    elif i < 3: # Near the head is bright green
+                        self.buf[y][x] = (50, 255, 80)
+                    else:
+                        # Fade based on distance from head
+                        intensity = (col["len"] - i) / col["len"]
+                        gv = int(255 * intensity * 0.8)
+                        if flicker: gv = min(255, gv + 60)
+                        self.buf[y][x] = (0, gv, int(gv * 0.2))
+                        
+        img = _new_frame()
+        img.putdata([p for row in self.buf for p in row])
+        return img
+
+class SnowAnimation:
+    def __init__(self):
+        self.flakes = [{"x": random.uniform(0, W), "y": random.uniform(0, W), "vy": random.uniform(0.2, 0.8), "vx": random.uniform(-0.1, 0.1), "r": random.uniform(0.4, 1.2), "bright": random.randint(180, 255), "osc": random.uniform(0, 2 * math.pi)} for _ in range(40)]
+        self.sky = [(int(5 + 15 * (y / W)), int(10 + 25 * (y / W)), int(30 + 50 * (y / W))) for y in range(W)]
+        self.frame = 0
+    def next_frame(self) -> 'Image.Image':
+        pixels = [self.sky[y] for y in range(W) for _ in range(W)]
+        for fl in self.flakes:
+            fl["y"] += fl["vy"]
+            fl["x"] = (fl["x"] + fl["vx"] + 0.15 * math.sin(fl["osc"] + self.frame * 0.1)) % W
+            if fl["y"] >= W:
+                fl["y"], fl["x"], fl["vy"] = 0, random.uniform(0, W), random.uniform(0.2, 0.8)
+            ix, iy = int(fl["x"]), int(fl["y"])
+            for dy in range(-1, 2):
+                for dx in range(-1, 2):
+                    nx, ny = ix + dx, iy + dy
+                    if 0 <= nx < W and 0 <= ny < W:
+                        fade = 1.0 - (abs(dx) + abs(dy)) * 0.4
+                        bv = int(fl["bright"] * fade * fl["r"])
+                        idx = ny * W + nx
+                        pr, pg, pb = pixels[idx]
+                        pixels[idx] = (min(255, pr + bv), min(255, pg + bv), min(255, pb + bv))
+        self.frame += 1
+        img = _new_frame()
+        img.putdata(pixels)
+        return img
+
+class AuroraAnimation:
+    def __init__(self): self.t = 0.0
+    def next_frame(self) -> 'Image.Image':
+        pixels = []
+        for y in range(W):
+            for x in range(W):
+                r, g, b = 2, 2, 8
+                for i in range(3):
+                    freq, speed, phase = 0.18 + i * 0.07, 0.04 + i * 0.02, i * 2.1
+                    wave_y = W * 0.35 + 6 * math.sin(x * freq + self.t * speed + phase)
+                    dist = abs(y - wave_y)
+                    width = 4.0 + 2 * math.sin(x * 0.3 + self.t * 0.03 + i)
+                    intensity = math.exp(-dist * dist / (2 * width * width))
+                    if i == 0:
+                        g += int(1.0 * intensity * 200); b += int(0.4 * intensity * 160)
+                    elif i == 1:
+                        r += int(0.2 * intensity * 120); g += int(0.6 * intensity * 180); b += int(1.0 * intensity * 220)
+                    else:
+                        r += int(0.8 * intensity * 160); g += int(0.1 * intensity * 80); b += int(1.0 * intensity * 200)
+                if random.Random(x * 1000 + y).random() > 0.94:
+                    sv = int(150 + 105 * math.sin(self.t * 2 + x * y * 0.1))
+                    r, g, b = max(r, sv), max(g, sv), max(b, sv)
+                pixels.append((min(255, r), min(255, g), min(255, b)))
+        self.t += 1.0
+        img = _new_frame()
+        img.putdata(pixels)
+        return img
+
+class WavesAnimation:
+    def __init__(self): self.t = 0.0
+    def next_frame(self) -> 'Image.Image':
+        pixels = []
+        for y in range(W):
+            for x in range(W):
+                surface = W * 0.42 + math.sin(x * 0.5 + self.t * 0.8) * 3 + math.sin(x * 0.3 - self.t * 0.5) * 2 + math.sin(x * 0.8 + self.t * 1.1) * 1.5
+                depth = y - surface
+                if depth < 0:
+                    sky_t = max(0, min(1, (-depth) / (W * 0.5)))
+                    r, g, b = int(30 + 80 * sky_t), int(80 + 100 * sky_t), int(160 + 80 * sky_t)
+                    sun_d = abs(x - (W * 0.7 + 4 * math.sin(self.t * 0.2)))
+                    if sun_d < 3 and depth > -8:
+                        glow = max(0, 1 - sun_d / 3) * max(0, 1 - (-depth) / 8)
+                        r, g, b = int(r + 200 * glow), int(g + 150 * glow), int(b + 50 * glow)
+                else:
+                    d_norm = min(1.0, depth / (W * 0.6))
+                    r, g, b = int(20 * (1 - d_norm)), int(40 + 80 * (1 - d_norm)), int(120 + 100 * (1 - d_norm))
+                    if depth < 1.5:
+                        foam = max(0, 1 - depth / 1.5)
+                        r, g, b = int(r + 200 * foam), int(g + 220 * foam), int(b + 240 * foam)
+                    if math.sin(x * 0.6 + self.t * 1.5) * math.cos(y * 0.4 + self.t * 0.9) > 0.6:
+                        r, g, b = min(255, r + 40), min(255, g + 60), min(255, b + 80)
+                pixels.append((min(255, max(0, r)), min(255, max(0, g)), min(255, max(0, b))))
+        self.t += 0.15
+        img = _new_frame()
+        img.putdata(pixels)
+        return img
+
+class RainbowAnimation:
+    def __init__(self): self.t = 0.0
+    def next_frame(self) -> 'Image.Image':
+        pixels = []
+        for y in range(W):
+            for x in range(W):
+                r, g, b = colorsys.hsv_to_rgb((x / W + y / W * 0.3 + self.t * 0.05) % 1.0, 1.0, 0.9 + 0.1 * math.sin(x * 0.4 + y * 0.3 + self.t * 2))
+                pixels.append((int(r * 255), int(g * 255), int(b * 255)))
+        self.t += 0.5
+        img = _new_frame()
+        img.putdata(pixels)
+        return img
+
+class PlasmaAnimation:
+    def __init__(self): self.t = 0.0
+    def next_frame(self) -> 'Image.Image':
+        pixels = []
+        for y in range(W):
+            for x in range(W):
+                v = (math.sin(x * 0.4 + self.t) + math.sin(y * 0.3 + self.t * 0.7) + math.sin((x + y) * 0.25 + self.t * 1.3) + math.sin(math.sqrt(x * x + y * y) * 0.4 + self.t * 0.9) + 4) / 8
+                r, g, b = colorsys.hsv_to_rgb(v, 1.0, 1.0)
+                pixels.append((int(r * 255), int(g * 255), int(b * 255)))
+        self.t += 0.12
+        img = _new_frame()
+        img.putdata(pixels)
+        return img
+
+class EqualizerAnimation:
+    def __init__(self):
+        self.bars = [random.uniform(0.1, 0.9) for _ in range(16)]
+        self.targets = [random.uniform(0.1, 0.9) for _ in range(16)]
+    def next_frame(self) -> 'Image.Image':
+        pixels = []
+        for i in range(16):
+            if abs(self.targets[i] - self.bars[i]) < 0.05:
+                self.targets[i] = random.uniform(0.1, 0.9)
+            self.bars[i] += (self.targets[i] - self.bars[i]) * 0.2
+        for y in range(W):
+            for x in range(W):
+                bar_idx = x // 2
+                height = int(self.bars[bar_idx] * 28)
+                if y >= W - height:
+                    h = W - y
+                    if h < 10: r, g, b = 0, 255, 0
+                    elif h < 20: r, g, b = 255, 255, 0
+                    else: r, g, b = 255, 0, 0
+                else: r, g, b = 0, 0, 0
+                pixels.append((r, g, b))
+        img = _new_frame()
+        img.putdata(pixels)
+        return img
+
+class PacmanAnimation:
+    def __init__(self):
+        self.x, self.ghost_x = -10.0, -25.0
+        self.mouth_angle, self.mouth_opening = 0.0, True
+    def next_frame(self) -> 'Image.Image':
+        pixels = [(0, 0, 0)] * (W * W)
+        self.x += 1.2; self.ghost_x += 1.2
+        if self.x > W + 30: self.x, self.ghost_x = -10.0, -25.0
+        if self.mouth_opening:
+            self.mouth_angle += 0.15
+            if self.mouth_angle >= 0.7: self.mouth_opening = False
+        else:
+            self.mouth_angle -= 0.15
+            if self.mouth_angle <= 0.0: self.mouth_opening = True
+                
+        for y in range(W):
+            for x in range(W):
+                idx = y * W + x
+                dx, dy = x - self.x, y - (W/2)
+                dist = math.sqrt(dx*dx + dy*dy)
+                if dist < 7.5:
+                    angle = math.atan2(dy, dx)
+                    if not (dx > 0 and abs(angle) < self.mouth_angle):
+                        pixels[idx] = (255, 255, 0)
+                elif abs(y - W/2) < 1.5 and x > self.x + 8 and x % 6 < 2:
+                    pixels[idx] = (255, 255, 255)
+                dx_g, dy_g = x - self.ghost_x, y - (W/2)
+                if abs(dx_g) <= 5 and dy_g >= -5 and dy_g <= 6:
+                    if dy_g < -1 and dx_g*dx_g + (dy_g+1)*(dy_g+1) > 25: pass
+                    elif dy_g == 6 and int(dx_g) % 2 != 0: pass
+                    elif dy_g in (-2, -1) and abs(int(dx_g)) in (2, 3):
+                        pixels[idx] = (255, 255, 255)
+                        if dx_g > 0 and int(dx_g) == 2: pixels[idx] = (0, 0, 255)
+                        elif dx_g < 0 and int(dx_g) == 2: pixels[idx] = (0, 0, 255)
+                    else: pixels[idx] = (255, 0, 0)
+        img = _new_frame()
+        img.putdata(pixels)
+        return img
 
 MINI_FONT = {
     "0": [(0,0),(1,0),(2,0),(0,1),(2,1),(0,2),(2,2),(0,3),(2,3),(0,4),(1,4),(2,4)],
@@ -24,20 +286,30 @@ MINI_FONT = {
     "~": [(0,1),(1,0),(2,1),(1,2)],
     ":": [(0,1),(0,3)],
     "A": [(1,0),(0,1),(2,1),(0,2),(1,2),(2,2),(0,3),(2,3),(0,4),(2,4)],
+    "B": [(0,0),(1,0),(0,1),(2,1),(0,2),(1,2),(0,3),(2,3),(0,4),(1,4)],
     "C": [(1,0),(2,0),(0,1),(0,2),(0,3),(1,4),(2,4)],
     "D": [(0,0),(1,0),(0,1),(2,1),(0,2),(2,2),(0,3),(2,3),(0,4),(1,4)],
     "E": [(0,0),(1,0),(2,0),(0,1),(0,2),(1,2),(0,3),(0,4),(1,4),(2,4)],
+    "F": [(0,0),(1,0),(2,0),(0,1),(0,2),(1,2),(0,3),(0,4)],
+    "G": [(1,0),(2,0),(0,1),(0,2),(2,2),(0,3),(2,3),(1,4),(2,4)],
     "H": [(0,0),(2,0),(0,1),(2,1),(0,2),(1,2),(2,2),(0,3),(2,3),(0,4),(2,4)],
-    "I": [(0,0),(1,0),(2,0),(1,1),(1,2),(1,3),(0,4),(1,4),(2,4)],
+    "I": [(1,0),(1,1),(1,2),(1,3),(1,4)],
+    "J": [(2,0),(2,1),(2,2),(0,3),(2,3),(1,4)],
+    "K": [(0,0),(2,0),(0,1),(1,1),(0,2),(0,3),(1,3),(0,4),(2,4)],
     "L": [(0,0),(0,1),(0,2),(0,3),(0,4),(1,4),(2,4)],
     "M": [(0,0),(2,0),(0,1),(1,1),(2,1),(0,2),(2,2),(0,3),(2,3),(0,4),(2,4)],
     "N": [(0,0),(2,0),(0,1),(1,1),(2,1),(0,2),(2,2),(0,3),(2,3),(0,4),(2,4)],
     "O": [(1,0),(0,1),(2,1),(0,2),(2,2),(0,3),(2,3),(1,4)],
-    "R": [(0,0),(1,0),(0,1),(2,1),(0,2),(1,2),(0,3),(2,3),(0,4),(2,4)],
+    "P": [(0,0),(1,0),(2,0),(0,1),(2,1),(0,2),(1,2),(2,2),(0,3),(0,4)],
+    "R": [(0,0),(1,0),(2,0),(0,1),(2,1),(0,2),(1,2),(0,3),(2,3),(0,4),(2,4)],
     "S": [(1,0),(2,0),(0,1),(0,2),(1,2),(2,3),(0,4),(1,4)],
     "T": [(0,0),(1,0),(2,0),(1,1),(1,2),(1,3),(1,4)],
     "U": [(0,0),(2,0),(0,1),(2,1),(0,2),(2,2),(0,3),(2,3),(1,4)],
+    "V": [(0,0),(2,0),(0,1),(2,1),(0,2),(2,2),(1,3)],
     "W": [(0,0),(2,0),(0,1),(2,1),(0,2),(1,2),(2,2),(0,3),(1,3),(2,3),(0,4),(2,4)],
+    "X": [(0,0),(2,0),(0,1),(2,1),(1,2),(0,3),(2,3),(0,4),(2,4)],
+    "Y": [(0,0),(2,0),(0,1),(2,1),(1,2),(1,3),(1,4)],
+    "Z": [(0,0),(1,0),(2,0),(2,1),(1,2),(0,3),(0,4),(1,4),(2,4)],
     "↑": [(1,0),(0,1),(1,1),(2,1),(1,2),(1,3),(1,4)],
     "↓": [(1,0),(1,1),(1,2),(0,3),(1,3),(2,3),(1,4)],
     "☀": [(1,0),(0,1),(1,1),(2,1),(1,2)],
@@ -47,7 +319,7 @@ MINI_FONT = {
 
 def draw_text(d, text, x, y, color):
     cx = x
-    for ch in text:
+    for ch in text.upper():
         pts = MINI_FONT.get(ch, [])
         for dx, dy in pts:
             d.point((cx + dx, y + dy), fill=color)
@@ -390,3 +662,275 @@ class WeatherAnimation:
         self.frame += 1
         return img
 
+
+class Particle:
+    def __init__(self, x: float, y: float, col: tuple[int, int, int], v: float = 0.0, vx: float = 0.0, vy: float = 0.0):
+        self.x = x
+        self.y = y
+        self.col = col
+        self.v = v
+        self.vx = vx
+        self.vy = vy
+        self.life = 1.0
+
+
+class ConfettiAnimation:
+    def __init__(self, data=None):
+        self.frame = 0
+        self.particles = []
+        for _ in range(50):
+            self.particles.append(Particle(
+                x=float(random.randint(0, W - 1)),
+                y=float(random.randint(0, W - 1)),
+                col=(random.randint(100, 255), random.randint(100, 255), random.randint(100, 255)),
+                v=random.uniform(0.5, 1.5)
+            ))
+
+    def next_frame(self):
+        img = Image.new("RGB", (W, W), (0, 0, 0))
+        d = ImageDraw.Draw(img)
+        for p in self.particles:
+            p.y = (p.y + p.v) % float(W)
+            p.x = (p.x + math.sin(self.frame * 0.15 + p.y * 0.5)) % float(W)
+            d.point((int(p.x), int(p.y)), fill=p.col)
+        self.frame += 1
+        return img
+
+
+class FireworkAnimation:
+    def __init__(self, data=None):
+        self.frame = 0
+        self.state = "launch"
+        self.x = 0.0
+        self.y = 0.0
+        self.vy = 0.0
+        self.explode_y = 0.0
+        self.particles = []
+        self.reset()
+
+    def reset(self):
+        self.x = float(random.randint(5, W - 6))
+        self.y = float(W - 1)
+        self.vy = -random.uniform(0.9, 1.4)
+        self.explode_y = float(random.randint(4, 12))
+        self.particles = []
+        self.state = "launch"
+
+    def next_frame(self):
+        img = Image.new("RGB", (W, W), (0, 0, 0))
+        d = ImageDraw.Draw(img)
+        if self.state == "launch":
+            self.y += self.vy
+            d.line([(self.x, int(self.y)), (self.x, int(self.y) + 2)], fill=(220, 220, 230))
+            if self.y <= self.explode_y:
+                self.state = "explode"
+                col = (random.randint(100, 255), random.randint(100, 255), random.randint(100, 255))
+                for _ in range(25):
+                    angle = random.uniform(0, 2 * math.pi)
+                    v = random.uniform(0.4, 2.2)
+                    self.particles.append(Particle(
+                        x=self.x,
+                        y=self.y,
+                        vx=math.cos(angle) * v,
+                        vy=math.sin(angle) * v,
+                        col=col
+                    ))
+        else:
+            active = False
+            for p in self.particles:
+                p.life -= 0.04
+                if p.life > 0:
+                    p.x += p.vx
+                    p.y += p.vy
+                    p.vy += 0.04
+                    c = tuple(int(c * p.life) for c in p.col)
+                    d.point((int(p.x), int(p.y)), fill=c) # type: ignore
+                    active = True
+            if not active:
+                self.reset()
+        self.frame += 1
+        return img
+
+
+class SnakeAnimation:
+    def __init__(self, data=None):
+        self.frame = 0
+        self.snake = [(16, 16), (16, 17), (16, 18)]
+        self.v_dir = (0, -1)
+        self.food = (random.randint(2, W - 3), random.randint(2, W - 3))
+
+    def next_frame(self):
+        if self.frame % 3 == 0:
+            hx, hy = self.snake[0]
+            fx, fy = self.food
+            if hx < fx: new_dir = (1, 0)
+            elif hx > fx: new_dir = (-1, 0)
+            elif hy < fy: new_dir = (0, 1)
+            else: new_dir = (0, -1)
+            self.v_dir = new_dir
+
+            dx, dy = self.v_dir
+            new_h = ((hx + dx) % W, (hy + dy) % W)
+            self.snake.insert(0, new_h)
+            if new_h == self.food:
+                self.food = (random.randint(2, W - 3), random.randint(2, W - 3))
+            else:
+                self.snake.pop()
+
+        img = Image.new("RGB", (W, W), (5, 5, 15))
+        d = ImageDraw.Draw(img)
+        for i, (sx, sy) in enumerate(self.snake):
+            col = (0, 255, 100) if i == 0 else (0, 160, 60)
+            d.point((sx, sy), fill=col)
+        d.point(self.food, fill=(255, 50, 50))
+        self.frame += 1
+        return img
+
+
+class TetrisAnimation:
+    def __init__(self, data=None):
+        self.frame = 0
+        self.grid = [[(0, 0, 0) for _ in range(14)] for _ in range(32)]
+        self.pieces = [
+            [(0, 0), (1, 0), (0, 1), (1, 1)],  # O
+            [(0, 0), (0, 1), (0, 2), (0, 3)],  # I
+            [(0, 0), (1, 0), (1, 1), (2, 1)],  # Z
+            [(1, 0), (0, 1), (1, 1), (2, 1)],  # T
+            [(0, 0), (0, 1), (1, 1), (2, 1)],  # L
+        ]
+        self.colors = [(255, 255, 0), (0, 255, 255), (255, 0, 0), (180, 0, 255), (255, 165, 0)]
+        self.p_idx = 0
+        self.p_col = (0, 0, 0)
+        self.px, self.py = 0, 0
+        self.reset_piece()
+
+    def reset_piece(self):
+        self.p_idx = random.randint(0, len(self.pieces) - 1)
+        self.p_col = self.colors[self.p_idx]
+        self.px, self.py = 6, 0
+
+    def next_frame(self):
+        if self.frame % 4 == 0:
+            self.py += 1
+            if self.py >= 28:
+                for dx, dy in self.pieces[self.p_idx]:
+                    yy = self.py + dy
+                    if 0 <= yy < 32:
+                        self.grid[yy][self.px + dx] = self.p_col
+                self.reset_piece()
+                if any(any(c != (0, 0, 0) for c in self.grid[y]) for y in range(2)):
+                    self.grid = [[(0, 0, 0) for _ in range(14)] for _ in range(32)]
+
+        img = Image.new("RGB", (W, W), (18, 18, 30))
+        d = ImageDraw.Draw(img)
+        off = 9
+        for y in range(32):
+            for x in range(14):
+                if self.grid[y][x] != (0, 0, 0):
+                    d.point((x + off, y), fill=self.grid[y][x]) # type: ignore
+        for dx, dy in self.pieces[self.p_idx]:
+            d.point((self.px + dx + off, self.py + dy), fill=self.p_col) # type: ignore
+        self.frame += 1
+        return img
+
+
+class DinoAnimation:
+    def __init__(self, data=None):
+        self.frame = 0
+        self.dy, self.dvy = 24.0, 0.0
+        self.cactus_x = float(W)
+        self.ground_y = 26
+
+    def next_frame(self):
+        img = Image.new("RGB", (W, W), (240, 240, 240))
+        d = ImageDraw.Draw(img)
+        d.line([(0, self.ground_y + 1), (W, self.ground_y + 1)], fill=(100, 100, 100))
+
+        if self.cactus_x < 12 and self.dy >= 24:
+            self.dvy = -2.2
+
+        self.dy += self.dvy
+        if self.dy < 24:
+            self.dvy += 0.25
+        else:
+            self.dy, self.dvy = 24.0, 0.0
+
+        self.cactus_x -= 1.2
+        if self.cactus_x < -5:
+            self.cactus_x = float(W + random.randint(0, 10))
+
+        # Dino
+        dx, dy = 5, int(self.dy)
+        d.rectangle([dx, dy - 4, dx + 3, dy], fill=(80, 80, 80))
+        d.point((dx + 4, dy - 4), fill=(80, 80, 80))
+
+        # Cactus
+        cx = int(self.cactus_x)
+        d.rectangle([cx, 22, cx + 1, 26], fill=(40, 120, 40))
+
+        self.frame += 1
+        return img
+
+
+class PenguinAnimation:
+    def __init__(self, data=None):
+        self.frame = 0
+
+    def next_frame(self):
+        img = Image.new("RGB", (W, W), (180, 220, 255))
+        d = ImageDraw.Draw(img)
+        d.rectangle([0, 20, W, W], fill=(255, 255, 255))
+
+        off = int(math.sin(self.frame * 0.1) * 10)
+        px, py = 12 + off, 18
+        d.ellipse([px, py, px + 8, py + 8], fill=(30, 30, 30))
+        d.ellipse([px + 2, py + 2, px + 6, py + 7], fill=(255, 255, 255))
+        d.point((px + 7 if off > 0 else px, py + 3), fill=(255, 160, 0))
+
+        self.frame += 1
+        return img
+
+
+class RPSAnimation:
+    def __init__(self, data):
+        self.frame = 0
+        self.user_choice = str(data.get("choice", "pierre")).lower()
+        self.pc_choice = str(random.choice(["pierre", "feuille", "ciseaux"]))
+        self.winner = self._get_winner()
+
+    def _get_winner(self):
+        u, p = self.user_choice, self.pc_choice
+        if u == p:
+            return "EGALITE"
+        win_map = {"pierre": "ciseaux", "feuille": "pierre", "ciseaux": "feuille"}
+        return "GAGNE !" if win_map.get(u) == p else "PERDU"
+
+    def _draw_icon(self, d, choice: str, x: int, y: int):
+        # Simplified icons for robustness
+        if choice == "pierre":
+            d.rectangle([x, y + 2, x + 8, y + 8], fill=(120, 120, 120))
+        elif choice == "feuille":
+            d.rectangle([x + 1, y, x + 7, y + 10], fill=(220, 220, 220))
+        else:  # ciseaux
+            d.rectangle([x, y, x + 2, y + 2], fill=(255, 50, 50))
+            d.rectangle([x + 6, y, x + 8, y + 2], fill=(255, 50, 50))
+            d.line([(x + 1, y + 2), (x + 7, y + 8)], fill=(150, 150, 150))
+            d.line([(x + 7, y + 2), (x + 1, y + 8)], fill=(150, 150, 150))
+
+    def next_frame(self):
+        img = Image.new("RGB", (W, W), (10, 10, 30))
+        d = ImageDraw.Draw(img)
+
+        # Show Result immediately (No countdown)
+        self._draw_icon(d, self.user_choice, 2, 6)
+        self._draw_icon(d, self.pc_choice, 20, 6)
+        draw_text(d, "VS", 14, 10, (255, 200, 0))
+        
+        res_col = (100, 255, 100) if "GAGNE" in self.winner else (255, 100, 100)
+        if self.winner == "EGALITE":
+            res_col = (200, 200, 200)
+        
+        draw_text(d, self.winner, int((W - len(self.winner)*4)/2), 22, res_col)
+
+        self.frame += 1
+        return img
