@@ -10,9 +10,7 @@ services:
     volumes:
       - /var/run/dbus:/var/run/dbus  
 
-    environment:
-      - IPIXEL_ADDRESS=${IPIXEL_ADDRESS:-00:00:00:00:00:00}
-      - IPIXEL_HOST=${IPIXEL_HOST:-0.0.0.0}
-      - IPIXEL_PORT=${IPIXEL_PORT:-5042}
+    env_file:
+      - .env
     command: >
       sh -c "python3 -m pypixelcolor.websocket -a $${IPIXEL_ADDRESS} --host $${IPIXEL_HOST} --port $${IPIXEL_PORT:-4444}"
