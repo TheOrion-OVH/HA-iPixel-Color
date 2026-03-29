@@ -68,9 +68,7 @@ async def async_setup_services(hass: HomeAssistant, hub: IPixelHub):
 
     async def handle_set_brightness(call):
         level = call.data.get("level", 50)
-        # Conversion 0-100 -> 0-255
-        level_send = int(level * 255 / 100)
-        await hub.async_send_command("set_brightness", [f"level={level_send}"])
+        await hub.async_send_command("set_brightness", [f"level={level}"])
 
     async def handle_set_clock_mode(call):
         style = call.data.get("style", 1)

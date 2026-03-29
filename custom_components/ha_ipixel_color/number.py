@@ -44,7 +44,6 @@ class IPixelNumber(NumberEntity):
         self._attr_native_value = v
         self.async_write_ha_state()
 
-        # Appliquer instantanément la luminosité (conversion 0-100 -> 0-255)
+        # Appliquer instantanément la luminosité (pas de conversion car le proxy attend 0-100)
         if self._key == "brightness":
-            v_send = int(v * 255 / 100)
-            await self.hub.async_send_command("set_brightness", [f"level={v_send}"])
+            await self.hub.async_send_command("set_brightness", [f"level={v}"])
