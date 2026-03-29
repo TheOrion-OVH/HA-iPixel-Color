@@ -28,10 +28,10 @@ class IPixelNumber(NumberEntity):
         self._attr_native_min_value = min_val
         self._attr_native_max_value = max_val
         self._attr_native_step = 1
-        self._attr_unique_id = f"{hub.mac_address}_{key}"
+        self._attr_unique_id = f"{hub.entry_id}_{key}"
         self._attr_icon = icon
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, hub.mac_address)},
+            identifiers={(DOMAIN, hub.entry_id)},
             name=hub.name,
             manufacturer="iPixel",
         )

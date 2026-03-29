@@ -17,9 +17,9 @@ class IPixelPowerSwitch(SwitchEntity):
     def __init__(self, hub):
         self.hub = hub
         self._attr_name = "Alimentation"
-        self._attr_unique_id = f"{hub.mac_address}_power"
+        self._attr_unique_id = f"{hub.entry_id}_power"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, hub.mac_address)},
+            identifiers={(DOMAIN, hub.entry_id)},
             name=hub.name,
             manufacturer="iPixel",
         )

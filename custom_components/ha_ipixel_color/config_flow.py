@@ -4,7 +4,7 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_NAME
 
-from .const import DOMAIN, CONF_MAC_ADDRESS, CONF_WS_URL, DEFAULT_NAME
+from .const import DOMAIN, CONF_WS_URL, DEFAULT_NAME
 
 class IPixelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for iPixel."""
@@ -16,7 +16,7 @@ class IPixelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            await self.async_set_unique_id(user_input[CONF_MAC_ADDRESS])
+            await self.async_set_unique_id(user_input[CONF_WS_URL])
             self._abort_if_unique_id_configured()
             
             return self.async_create_entry(title=user_input.get(CONF_NAME, DEFAULT_NAME), data=user_input)
@@ -24,7 +24,6 @@ class IPixelConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         data_schema = vol.Schema(
             {
                 vol.Required(CONF_NAME, default=DEFAULT_NAME): str,
-                vol.Required(CONF_MAC_ADDRESS): str,
                 vol.Required(CONF_WS_URL): str,
             }
         )

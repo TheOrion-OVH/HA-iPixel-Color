@@ -6,7 +6,7 @@ import sys
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, PLATFORMS, CONF_MAC_ADDRESS, CONF_WS_URL
+from .const import DOMAIN, PLATFORMS, CONF_WS_URL
 from .coordinator import IPixelHub
 
 _LOGGER = logging.getLogger(__name__)
@@ -14,8 +14,6 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up iPixel from a config entry."""
-    mac_address = entry.data.get(CONF_MAC_ADDRESS)
     ws_url = entry.data.get(CONF_WS_URL)
     
     hass.data.setdefault(DOMAIN, {})
@@ -28,7 +26,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ws_uri = ws_url
     
     hub = IPixelHub(hass, ws_uri)
-    hub.mac_address = mac_address
+    hub.entry_id = entry.entry_id
     hub.name = entry.title
 
     hass.data[DOMAIN][entry.entry_id] = hub

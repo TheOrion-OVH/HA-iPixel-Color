@@ -30,10 +30,10 @@ class IPixelButton(ButtonEntity):
         self.hub = hub
         self._action = action
         self._attr_name = name
-        self._attr_unique_id = f"{hub.mac_address}_{action}"
+        self._attr_unique_id = f"{hub.entry_id}_{action}"
         self._attr_icon = icon
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, hub.mac_address)},
+            identifiers={(DOMAIN, hub.entry_id)},
             name=hub.name,
             manufacturer="iPixel",
         )

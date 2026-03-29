@@ -27,10 +27,10 @@ class IPixelText(TextEntity):
         self._attr_name = name
         self._attr_native_value = hub.data[key]
         self._attr_native_max = max_length
-        self._attr_unique_id = f"{hub.mac_address}_{key}"
+        self._attr_unique_id = f"{hub.entry_id}_{key}"
         self._attr_icon = icon
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, hub.mac_address)},
+            identifiers={(DOMAIN, hub.entry_id)},
             name=hub.name,
             manufacturer="iPixel",
         )
