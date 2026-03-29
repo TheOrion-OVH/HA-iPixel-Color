@@ -295,8 +295,9 @@ class IPixelHub:
             if not HAS_PIL:
                 raise RuntimeError("Pillow is required for animations.")
                 
-            if anim_name == "sun_mode":
-                anim_obj = SunAnimation()
+            if anim_name.startswith("sun_mode:"):
+                data = json.loads(anim_name.split(":", 1)[1])
+                anim_obj = SunAnimation(data)
             elif anim_name.startswith("weather_mode:"):
                 data = json.loads(anim_name.split(":", 1)[1])
                 anim_obj = WeatherAnimation(data)

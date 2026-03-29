@@ -15,9 +15,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         IPixelButton(hub, "Envoyer Image", "send_image", "mdi:image"),
         IPixelButton(hub, "Appliquer luminosité", "set_brightness", "mdi:brightness-5"),
         IPixelButton(hub, "Appliquer vitesse", "set_speed", "mdi:speedometer"),
+        IPixelButton(hub, "Mode Horloge", "set_clock_mode", "mdi:clock-outline"),
+        IPixelButton(hub, "Appliquer Orientation", "set_orientation", "mdi:screen-rotation"),
+        IPixelButton(hub, "Dessiner Pixel", "set_pixel", "mdi:square-edit-outline"),
+        IPixelButton(hub, "Démarrer l'animation", "play_anim", "mdi:play-circle"),
         IPixelButton(hub, "Effacer écran", "clear", "mdi:monitor-off"),
         IPixelButton(hub, "Mode Soleil", "show_sun", "mdi:white-balance-sunny"),
         IPixelButton(hub, "Mode Météo", "show_weather", "mdi:weather-partly-cloudy"),
+        IPixelButton(hub, "Redémarrer", "reboot", "mdi:restart"),
     ]
     async_add_entities(buttons)
 
@@ -60,7 +65,15 @@ class IPixelButton(ButtonEntity):
         elif self._action == "clear":
             await self.hub.async_send_command("clear")
         elif self._action == "show_sun":
-            await self.hub.async_send_command("send_image", ["path=animation:sun_mode", "resize_method=fit"])
+            sun = self.hub.hass.states.get("sun.sun")
+            if sun:
+                state = sun.state
+                elev = sun.attributes.get("elevation", 0)
+            else:
+                state, elev = "unknown", 0
+            import json
+            json_data = json.dumps({"state": state, "elevation": elev})
+            await self.hub.async_send_command("send_image", [f"path=animation:sun_mode:{json_data}", "resize_method=fit"])
         elif self._action == "show_weather":
             w_states = self.hub.hass.states.async_all("weather")
             if w_states:
