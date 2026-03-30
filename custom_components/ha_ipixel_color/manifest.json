@@ -2,8 +2,8 @@
   "domain": "ha_ipixel_color",
   "name": "HA iPixel Color",
   "version": "1.1.0",
-  "documentation": "https://github.com/TheOrion-OVH/HA-iPixel-Color",
-  "issue_tracker": "https://github.com/TheOrion-OVH/HA-iPixel-Color/issues",
+  "documentation": "https://github.com/AlzenUser/HA-iPixel-Color",
+  "issue_tracker": "https://github.com/AlzenUser/HA-iPixel-Color/issues",
   "dependencies": [],
   "codeowners": [],
   "requirements": [
